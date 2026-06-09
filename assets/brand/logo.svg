@@ -1,0 +1,28 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Semantics Checker logo</title>
+  <desc id="desc">A modern shield mark with code brackets and a check symbol for Flutter semantics auditing.</desc>
+  <defs>
+    <linearGradient id="surface" x1="84" y1="60" x2="430" y2="454" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#38BDF8"/>
+      <stop offset="0.48" stop-color="#2563EB"/>
+      <stop offset="1" stop-color="#0F172A"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="151" y1="135" x2="381" y2="381" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#A7F3D0"/>
+      <stop offset="1" stop-color="#34D399"/>
+    </linearGradient>
+    <filter id="softShadow" x="28" y="28" width="456" height="456" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="22" stdDeviation="24" flood-color="#0F172A" flood-opacity="0.2"/>
+    </filter>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="#F8FAFC"/>
+  <g filter="url(#softShadow)">
+    <path d="M256 58L407 118V226C407 328 344 410 256 452C168 410 105 328 105 226V118L256 58Z" fill="url(#surface)"/>
+  </g>
+  <path d="M256 98L367 143V229C367 304 323 364 256 399C189 364 145 304 145 229V143L256 98Z" fill="#FFFFFF" fill-opacity="0.1"/>
+  <path d="M214 181L161 234L214 287" stroke="#E0F2FE" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M298 181L351 234L298 287" stroke="#E0F2FE" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M214 318L247 351L326 263" stroke="url(#accent)" stroke-width="32" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="256" cy="236" r="31" fill="#E0F2FE"/>
+  <circle cx="256" cy="236" r="13" fill="#2563EB"/>
+</svg>

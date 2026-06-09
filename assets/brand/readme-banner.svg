@@ -1,0 +1,52 @@
+<svg width="1600" height="520" viewBox="0 0 1600 520" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Semantics Checker README banner</title>
+  <desc id="desc">A modern banner for a Dart CLI library that audits Flutter semantics identifiers.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1600" y2="520" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F8FAFC"/>
+      <stop offset="0.54" stop-color="#EEF6FF"/>
+      <stop offset="1" stop-color="#ECFDF5"/>
+    </linearGradient>
+    <linearGradient id="shield" x1="1032" y1="83" x2="1370" y2="424" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#38BDF8"/>
+      <stop offset="0.48" stop-color="#2563EB"/>
+      <stop offset="1" stop-color="#0F172A"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="1127" y1="180" x2="1303" y2="348" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#A7F3D0"/>
+      <stop offset="1" stop-color="#34D399"/>
+    </linearGradient>
+    <filter id="shadow" x="921" y="37" width="500" height="465" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="28" stdDeviation="30" flood-color="#0F172A" flood-opacity="0.18"/>
+    </filter>
+  </defs>
+  <rect width="1600" height="520" rx="0" fill="url(#bg)"/>
+  <path d="M1197 -180C1321 -123 1413 25 1415 163C1417 301 1331 429 1196 463C1061 497 875 437 805 317C735 197 781 17 882 -91C983 -199 1074 -237 1197 -180Z" fill="#DBEAFE" fill-opacity="0.82"/>
+  <path d="M1525 49C1578 107 1597 219 1564 301C1531 383 1445 436 1359 432C1273 428 1187 374 1165 295C1143 216 1185 104 1246 44C1307 -16 1472 -9 1525 49Z" fill="#D1FAE5" fill-opacity="0.74"/>
+  <g opacity="0.8">
+    <rect x="102" y="102" width="92" height="28" rx="14" fill="#DBEAFE"/>
+    <rect x="102" y="157" width="142" height="18" rx="9" fill="#BFDBFE"/>
+    <rect x="102" y="196" width="112" height="18" rx="9" fill="#BFDBFE"/>
+    <rect x="102" y="235" width="160" height="18" rx="9" fill="#A7F3D0"/>
+  </g>
+  <text x="112" y="202" fill="#0F172A" font-family="Inter, Plus Jakarta Sans, Segoe UI, Arial, sans-serif" font-size="76" font-weight="800" letter-spacing="-1">Semantics Checker</text>
+  <text x="116" y="260" fill="#334155" font-family="Inter, Plus Jakarta Sans, Segoe UI, Arial, sans-serif" font-size="30" font-weight="600">Flutter semantics identifier audit CLI</text>
+  <text x="116" y="316" fill="#64748B" font-family="Inter, Plus Jakarta Sans, Segoe UI, Arial, sans-serif" font-size="22" font-weight="500">AST-powered validation for accessible, automation-ready widgets.</text>
+  <g>
+    <rect x="116" y="362" width="166" height="42" rx="21" fill="#0F172A"/>
+    <text x="148" y="390" fill="#FFFFFF" font-family="Inter, Plus Jakarta Sans, Segoe UI, Arial, sans-serif" font-size="17" font-weight="700">Dart CLI</text>
+    <rect x="298" y="362" width="234" height="42" rx="21" fill="#FFFFFF" stroke="#CBD5E1"/>
+    <text x="329" y="390" fill="#1E40AF" font-family="Inter, Plus Jakarta Sans, Segoe UI, Arial, sans-serif" font-size="17" font-weight="700">No Regex Scanning</text>
+    <rect x="548" y="362" width="202" height="42" rx="21" fill="#FFFFFF" stroke="#CBD5E1"/>
+    <text x="579" y="390" fill="#047857" font-family="Inter, Plus Jakarta Sans, Segoe UI, Arial, sans-serif" font-size="17" font-weight="700">CI/CD Ready</text>
+  </g>
+  <g filter="url(#shadow)">
+    <path d="M1210 76L1367 138V251C1367 356 1301 439 1210 483C1119 439 1053 356 1053 251V138L1210 76Z" fill="url(#shield)"/>
+  </g>
+  <path d="M1210 119L1323 164V253C1323 329 1278 390 1210 426C1142 390 1097 329 1097 253V164L1210 119Z" fill="#FFFFFF" fill-opacity="0.1"/>
+  <path d="M1169 209L1117 261L1169 313" stroke="#E0F2FE" stroke-width="27" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M1252 209L1304 261L1252 313" stroke="#E0F2FE" stroke-width="27" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M1170 344L1203 377L1282 289" stroke="url(#accent)" stroke-width="31" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="1210" cy="261" r="30" fill="#E0F2FE"/>
+  <circle cx="1210" cy="261" r="13" fill="#2563EB"/>
+</svg>

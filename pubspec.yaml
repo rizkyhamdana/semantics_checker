@@ -1,0 +1,17 @@
+name: semantics_checker
+description: CLI tool to audit and enforce semantics identifiers in Flutter widgets.
+version: 1.0.0
+publish_to: none
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  args: ^2.4.0
+  path: ^1.8.0
+  yaml: ^3.1.0
+  analyzer: ^6.0.0
+  pdf: ^3.11.0
+
+dev_dependencies:
+  lints: ^3.0.0
