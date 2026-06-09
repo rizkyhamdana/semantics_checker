@@ -11,14 +11,18 @@ Sangat ideal diintegrasikan ke dalam pipeline CI/CD guna mendeteksi widget inter
 ## 🚀 Fitur Utama
 
 - 🧠 **AST Parsing Akurat (No Regex Scanning)**: Menggunakan parser resmi `package:analyzer` untuk membaca pohon sintaksis Dart, memastikan tidak ada kecocokan palsu (*false positives*) dari komentar atau string biasa.
+- 🔍 **Deteksi Otomatis Widget Default (Pre-scan)**: Secara dinamis mendeteksi jika suatu custom widget dideklarasikan dengan parameter semantics bernilai default (di dalam constructor) atau dibungkus dengan default `Semantics` di dalam fungsi `build` kelasnya, tanpa perlu didaftarkan di `default_widgets` pada file YAML. Pemanggilan widget ini otomatis dikategorikan sebagai **Warning** (bukan **Error**).
+- 💡 **Cerdas Terhadap Variabel & Interpolasi**: Pintar mengenali parameter berupa variabel atau ekspresi dinamis (seperti `widget.id`, `index + 1`, dll.) agar tidak memicu error format penamaan salah (*false positive*), serta membersihkan ekspresi interpolasi string dinamis secara presisi sebelum divalidasi dengan regex format.
+- 🔗 **Format Output Linkable (Clickable)**: Output di terminal menggunakan format standar `filepath:line` (contoh: `lib/widget/labeled_text_field.dart:135`) sehingga developer dapat langsung melakukan klik (atau `Cmd + Click`) pada terminal IDE untuk melompat ke baris kode yang bersangkutan.
 - 🌿 **Git Integration (Incremental Auditing)**: Secara cerdas mengidentifikasi file Dart yang diubah pada cabang aktif (`git diff`) untuk audit super cepat pada pull-request.
 - 📂 **Full Project Scanning**: Dukungan mode `-a` atau `--all` untuk memindai seluruh berkas Dart di dalam direktori `lib/` proyek.
 - 📊 **Premium Multi-Format Reports**: Otomatis mengekspor hasil audit ke dalam tiga format profesional sekaligus:
   - **PDF (`semantics_report/report.pdf`)**: Siap untuk laporan tim QA/Produksi.
   - **HTML (`semantics_report/report.html`)**: Dilengkapi dengan UI modern, collapsible list, filter pencarian interaktif, dan status kelulusan.
-  - **Markdown (`semantics_report/report.md`)**: Format terstruktur yang siap dibaca langsung dari platform Git.
+  - **Markdown (`semantics_report/report.md`)**: Format terukuran yang siap dibaca langsung dari platform Git.
 - 🛠️ **Custom Configuration (`semantics_checker.yaml`)**: Kemudahan mengecualikan berkas, menentukan daftar widget target, dan mengatur ambang batas audit.
-- ⚙️ **CI/CD Ready**: Menghasilkan exit code `1` saat ada pelanggaran audit dan `0` saat lulus, sangat andal untuk menjaga pipeline tetap bersih.
+- ⚙️ **CI/CD Ready**: Menghasilkan exit code `1` saat ada pelanggaran audit (Error) dan `0` saat lulus (atau hanya tersisa Warning), sangat andal untuk menjaga pipeline tetap bersih.
+
 
 ---
 
