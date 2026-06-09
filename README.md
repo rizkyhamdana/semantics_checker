@@ -66,7 +66,7 @@ dev_dependencies:
 dev_dependencies:
   semantics_checker:
     git:
-      url: https://github.com/organisasi-anda/semantics_checker.git
+      url: https://github.com/rizkyhamdana/semantics_checker.git
       ref: main
 ```
 
