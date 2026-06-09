@@ -58,16 +58,17 @@ class CliRunner {
 
       if (result.issues.isNotEmpty) {
         for (final issue in result.issues) {
-          print('\n📄 File: ${issue.filePath}');
+          final prefix = issue.isWarning ? '⚠️ [WARNING]' : '❌ [ERROR]';
+          print('\n$prefix ${issue.filePath}:${issue.line}');
           if (issue.isWarning) {
-            print('  [Baris ${issue.line}] ⚠️ [WARNING] Widget "${issue.widgetName}": ${issue.errorMessage ?? "Missing semantics identifier (uses default widget value)."}');
+            print('  Widget "${issue.widgetName}": ${issue.errorMessage ?? "Missing semantics identifier (uses default widget value)."}');
             if (issue.suggestion.isNotEmpty) {
               print('    👉 Suggested unique ID: "${issue.suggestion}"');
             }
           } else if (issue.isFormatIssue) {
-            print('  [Baris ${issue.line}] ❌ [ERROR] ${issue.errorMessage}');
+            print('  ${issue.errorMessage}');
           } else {
-            print('  [Baris ${issue.line}] ❌ [ERROR] Widget "${issue.widgetName}" lacks semantics identifier.');
+            print('  Widget "${issue.widgetName}" lacks semantics identifier.');
             print('    👉 Suggested placeholder ID: "${issue.suggestion}"');
           }
         }

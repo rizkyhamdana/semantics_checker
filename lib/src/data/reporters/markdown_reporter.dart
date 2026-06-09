@@ -73,45 +73,83 @@ class MarkdownReporter {
 
       final grouped = _groupIssuesByFile(issues);
       for (final group in grouped) {
+        final fileErrors = group.issues.where((i) => !i.isWarning).toList();
+        final fileWarnings = group.issues.where((i) => i.isWarning).toList();
         final totalIssues = group.issues.length;
+
         buffer.writeln('<details>');
         buffer.writeln(
             '<summary><b>📄 ${group.filePath}</b> ($totalIssues issue${totalIssues > 1 ? "s" : ""})</summary>\n');
         buffer.writeln('<br/>\n');
 
-        buffer.writeln(
-            '| Line | Widget | Type | Suggested/Error Message | Code Snippet |');
-        buffer.writeln('| :---: | :--- | :---: | :--- | :--- |');
-
-        for (final issue in group.issues) {
-          final singleLineCode = issue.codeSnippet
-              .replaceAll('\n', ' ')
-              .replaceAll('\r', '')
-              .trim();
-          final formattedCodeSnippet = singleLineCode.length > 50
-              ? '${singleLineCode.substring(0, 47)}...'
-              : singleLineCode;
-
-          final typeLabel = issue.isWarning ? '⚠️ Warning' : '❌ Error';
-          final displaySuggestion = issue.isWarning
-              ? 'Uses default identifier. Suggest unique: **`${issue.suggestion}`**'
-              : issue.isFormatIssue 
-                  ? '_Format Salah_: ${issue.errorMessage}' 
-                  : 'Lacks Semantics ID. Suggest: **`${issue.suggestion}`**';
-
+        // 3.1 Errors Table
+        if (fileErrors.isNotEmpty) {
+          buffer.writeln('#### ❌ Errors to Fix (${fileErrors.length})\n');
           buffer.writeln(
-              '| **${issue.line}** | `${issue.widgetName}` | $typeLabel | $displaySuggestion | `${formattedCodeSnippet}` |');
+              '| Line | Widget | Error Message / Suggested ID | Code Snippet |');
+          buffer.writeln('| :---: | :--- | :--- | :--- |');
+
+          for (final issue in fileErrors) {
+            final singleLineCode = issue.codeSnippet
+                .replaceAll('\n', ' ')
+                .replaceAll('\r', '')
+                .trim();
+            final formattedCodeSnippet = singleLineCode.length > 50
+                ? '${singleLineCode.substring(0, 47)}...'
+                : singleLineCode;
+
+            final displaySuggestion = issue.isFormatIssue 
+                ? '_Format Salah_: ${issue.errorMessage}' 
+                : 'Lacks Semantics ID. Suggest: **`${issue.suggestion}`**';
+
+            buffer.writeln(
+                '| **${issue.line}** | `${issue.widgetName}` | $displaySuggestion | `${formattedCodeSnippet}` |');
+          }
+          buffer.writeln('\n');
         }
 
-        buffer.writeln('\n');
-        buffer.writeln('#### Detailed Code View\n');
-        for (final issue in group.issues) {
-          final prefix = issue.isWarning ? '⚠️ WARNING' : '❌ ERROR';
-          final message = issue.errorMessage ?? (issue.isWarning 
-              ? 'Widget lacks unique semantics identifier (uses default widget value)' 
-              : 'Widget lacks semantics identifier');
+        // 3.2 Warnings Table
+        if (fileWarnings.isNotEmpty) {
+          buffer.writeln('#### ⚠️ Warnings to Review (${fileWarnings.length})\n');
           buffer.writeln(
-              '**Line ${issue.line}** - `${issue.widgetName}` ($prefix: $message):');
+              '| Line | Widget | Warning / Suggested Unique ID | Code Snippet |');
+          buffer.writeln('| :---: | :--- | :--- | :--- |');
+
+          for (final issue in fileWarnings) {
+            final singleLineCode = issue.codeSnippet
+                .replaceAll('\n', ' ')
+                .replaceAll('\r', '')
+                .trim();
+            final formattedCodeSnippet = singleLineCode.length > 50
+                ? '${singleLineCode.substring(0, 47)}...'
+                : singleLineCode;
+
+            final displaySuggestion = 'Uses default identifier. Suggest unique: **`${issue.suggestion}`**';
+
+            buffer.writeln(
+                '| **${issue.line}** | `${issue.widgetName}` | $displaySuggestion | `${formattedCodeSnippet}` |');
+          }
+          buffer.writeln('\n');
+        }
+
+        buffer.writeln('#### Detailed Code View\n');
+        // Render Errors first
+        for (final issue in fileErrors) {
+          final message = issue.errorMessage ?? 'Widget lacks semantics identifier';
+          buffer.writeln(
+              '**Line ${issue.line}** - `${issue.widgetName}` (❌ ERROR: $message):');
+          if (issue.suggestion.isNotEmpty) {
+            buffer.writeln('Suggested ID: `${issue.suggestion}`');
+          }
+          buffer.writeln('```dart');
+          buffer.writeln(issue.codeSnippet.trim());
+          buffer.writeln('```\n');
+        }
+        // Render Warnings second
+        for (final issue in fileWarnings) {
+          final message = issue.errorMessage ?? 'Widget lacks unique semantics identifier (uses default widget value)';
+          buffer.writeln(
+              '**Line ${issue.line}** - `${issue.widgetName}` (⚠️ WARNING: $message):');
           if (issue.suggestion.isNotEmpty) {
             buffer.writeln('Suggested unique ID: `${issue.suggestion}`');
           }

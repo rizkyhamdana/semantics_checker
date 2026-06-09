@@ -116,6 +116,7 @@ class _SemanticsVisitor extends RecursiveAstVisitor<void> {
 
       bool hasSemantics = false;
       String? semanticsValue;
+      bool isLiteral = false;
       
       // Mengubah ke lowercase untuk membandingkan secara case-insensitive
       final lowerCaseProps = semanticsProperties.map((p) => p.toLowerCase()).toList();
@@ -129,8 +130,13 @@ class _SemanticsVisitor extends RecursiveAstVisitor<void> {
             final valueExpr = arg.expression;
             if (valueExpr is SimpleStringLiteral) {
               semanticsValue = valueExpr.value;
+              isLiteral = true;
+            } else if (valueExpr is StringLiteral || valueExpr is AdjacentStrings) {
+              semanticsValue = valueExpr.toSource().replaceAll(RegExp(r"['" + '"' + "]"), '');
+              isLiteral = true;
             } else {
               semanticsValue = valueExpr.toSource().replaceAll(RegExp(r"['" + '"' + "]"), '');
+              isLiteral = false;
             }
             break;
           }
@@ -152,8 +158,13 @@ class _SemanticsVisitor extends RecursiveAstVisitor<void> {
                     final valueExpr = arg.expression;
                     if (valueExpr is SimpleStringLiteral) {
                       semanticsValue = valueExpr.value;
+                      isLiteral = true;
+                    } else if (valueExpr is StringLiteral || valueExpr is AdjacentStrings) {
+                      semanticsValue = valueExpr.toSource().replaceAll(RegExp(r"['" + '"' + "]"), '');
+                      isLiteral = true;
                     } else {
                       semanticsValue = valueExpr.toSource().replaceAll(RegExp(r"['" + '"' + "]"), '');
+                      isLiteral = false;
                     }
                     break;
                   }
@@ -172,8 +183,13 @@ class _SemanticsVisitor extends RecursiveAstVisitor<void> {
                     final valueExpr = arg.expression;
                     if (valueExpr is SimpleStringLiteral) {
                       semanticsValue = valueExpr.value;
+                      isLiteral = true;
+                    } else if (valueExpr is StringLiteral || valueExpr is AdjacentStrings) {
+                      semanticsValue = valueExpr.toSource().replaceAll(RegExp(r"['" + '"' + "]"), '');
+                      isLiteral = true;
                     } else {
                       semanticsValue = valueExpr.toSource().replaceAll(RegExp(r"['" + '"' + "]"), '');
+                      isLiteral = false;
                     }
                     break;
                   }
@@ -244,12 +260,12 @@ class _SemanticsVisitor extends RecursiveAstVisitor<void> {
           errorMessage: 'Widget "$name" menggunakan default identifier "$semanticsValue". Harap ganti dengan identifier unik.',
         ));
       }
-      // Kasus 3: Ada Semantics ID tetapi salah format berdasarkan RegExp config
-      else if (semanticsValue != null) {
-        // Bersihkan interpolasi string dinamis (seperti $index, ${index}) agar tidak merusak validasi regex standar
+      // Kasus 3: Ada Semantics ID tetapi salah format berdasarkan RegExp config (hanya jika berupa literal string)
+      else if (semanticsValue != null && isLiteral) {
+        // Bersihkan interpolasi string dinamis (seperti $index, ${index + 1}) agar tidak merusak validasi regex standar
         final cleanValue = semanticsValue
             .replaceAll(RegExp(r'\$[a-zA-Z0-9_]+'), '')
-            .replaceAll(RegExp(r'\$\{[a-zA-Z0-9_]+\}'), '');
+            .replaceAll(RegExp(r'\$\{[^}]+\}'), '');
 
         final regExp = RegExp(idPattern);
         if (!regExp.hasMatch(cleanValue)) {

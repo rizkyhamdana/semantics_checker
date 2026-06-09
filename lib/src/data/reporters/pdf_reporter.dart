@@ -296,7 +296,6 @@ class PdfReporter {
             ],
 
             // Remaining Issues Grouped by File
-            // Remaining Issues Grouped by File
             if (issues.isNotEmpty) ...[
               pw.Text(
                 'x Remaining Issues requiring Action',
@@ -331,102 +330,170 @@ class PdfReporter {
                     ],
                   ),
                 ),
-                pw.SizedBox(height: 2),
-                pw.Table(
-                  border: pw.TableBorder.all(
-                      color: PdfColor.fromHex('#F1F5F9'), width: 0.5),
-                  columnWidths: {
-                    0: const pw.FixedColumnWidth(35),
-                    1: const pw.FixedColumnWidth(90),
-                    2: const pw.FixedColumnWidth(50),
-                    3: const pw.FixedColumnWidth(140),
-                    4: const pw.FlexColumnWidth(),
-                  },
-                  children: [
-                    pw.TableRow(
-                      decoration:
-                          pw.BoxDecoration(color: PdfColor.fromHex('#FEF2F2')),
-                      children: [
-                        _buildHeaderCell('Line', PdfColor.fromHex('#991B1B')),
-                        _buildHeaderCell('Widget', PdfColor.fromHex('#991B1B')),
-                        _buildHeaderCell('Type', PdfColor.fromHex('#991B1B')),
-                        _buildHeaderCell('Message/Suggested', PdfColor.fromHex('#991B1B')),
-                        _buildHeaderCell('Code Snippet', PdfColor.fromHex('#991B1B')),
-                      ],
-                    ),
-                    for (int i = 0; i < group.issues.length; i++)
+                pw.SizedBox(height: 4),
+
+                // Errors Table
+                if (group.issues.where((i) => !i.isWarning).isNotEmpty) ...[
+                  pw.Text('❌ Errors to Fix (${group.issues.where((i) => !i.isWarning).length})',
+                      style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColor.fromHex('#991B1B'))),
+                  pw.SizedBox(height: 3),
+                  pw.Table(
+                    border: pw.TableBorder.all(
+                        color: PdfColor.fromHex('#F1F5F9'), width: 0.5),
+                    columnWidths: {
+                      0: const pw.FixedColumnWidth(35),
+                      1: const pw.FixedColumnWidth(100),
+                      2: const pw.FixedColumnWidth(180),
+                      3: const pw.FlexColumnWidth(),
+                    },
+                    children: [
                       pw.TableRow(
-                        decoration: pw.BoxDecoration(
-                          color: i % 2 == 0
-                              ? PdfColors.white
-                              : PdfColor.fromHex('#FAFAFA'),
-                        ),
+                        decoration:
+                            pw.BoxDecoration(color: PdfColor.fromHex('#FEF2F2')),
                         children: [
-                          _buildTableCell('${group.issues[i].line}'),
-                          pw.Padding(
-                            padding: const pw.EdgeInsets.all(5),
-                            child: pw.Container(
-                              padding: const pw.EdgeInsets.symmetric(
-                                  vertical: 2, horizontal: 4),
-                              decoration: pw.BoxDecoration(
-                                color: group.issues[i].isWarning
-                                    ? PdfColor.fromHex('#FEF3C7')
-                                    : PdfColor.fromHex('#EFF6FF'),
-                                borderRadius: const pw.BorderRadius.all(
-                                    pw.Radius.circular(3)),
-                              ),
-                              child: pw.Text(
-                                group.issues[i].widgetName,
-                                style: pw.TextStyle(
-                                  fontSize: 7,
-                                  fontWeight: pw.FontWeight.bold,
-                                  color: group.issues[i].isWarning
-                                      ? PdfColor.fromHex('#D97706')
-                                      : PdfColor.fromHex('#1D4ED8'),
-                                ),
-                              ),
-                            ),
-                          ),
-                          _buildTableCell(
-                            group.issues[i].isWarning ? 'Warning' : 'Error',
-                            textColor: group.issues[i].isWarning ? PdfColor.fromHex('#D97706') : PdfColor.fromHex('#991B1B'),
-                            isBold: true,
-                          ),
-                          _buildTableCell(
-                            group.issues[i].isWarning
-                                ? 'Default ID. Suggest: ${group.issues[i].suggestion}'
-                                : group.issues[i].isFormatIssue
-                                    ? 'Format Salah: ${group.issues[i].errorMessage}'
-                                    : 'Lacks ID. Suggest: ${group.issues[i].suggestion}',
-                            textColor: group.issues[i].isWarning
-                                ? PdfColor.fromHex('#B45309')
-                                : (group.issues[i].isFormatIssue ? PdfColor.fromHex('#991B1B') : PdfColors.green800),
-                            isBold: !group.issues[i].isWarning && !group.issues[i].isFormatIssue,
-                          ),
-                          pw.Padding(
-                            padding: const pw.EdgeInsets.all(5),
-                            child: pw.Container(
-                              padding: const pw.EdgeInsets.all(4),
-                              decoration: pw.BoxDecoration(
-                                color: PdfColor.fromHex('#0F172A'),
-                                borderRadius: const pw.BorderRadius.all(
-                                    pw.Radius.circular(4)),
-                              ),
-                              child: pw.Text(
-                                group.issues[i].codeSnippet,
-                                style: pw.TextStyle(
-                                  fontSize: 6.5,
-                                  font: pw.Font.courier(),
-                                  color: PdfColor.fromHex('#E2E8F0'),
-                                ),
-                              ),
-                            ),
-                          ),
+                          _buildHeaderCell('Line', PdfColor.fromHex('#991B1B')),
+                          _buildHeaderCell('Widget', PdfColor.fromHex('#991B1B')),
+                          _buildHeaderCell('Error Message / Suggested ID', PdfColor.fromHex('#991B1B')),
+                          _buildHeaderCell('Code Snippet', PdfColor.fromHex('#991B1B')),
                         ],
                       ),
-                  ],
-                ),
-                pw.SizedBox(height: 10),
+                      for (final error in group.issues.where((i) => !i.isWarning))
+                        pw.TableRow(
+                          decoration: const pw.BoxDecoration(color: PdfColors.white),
+                          children: [
+                            _buildTableCell('${error.line}'),
+                            pw.Padding(
+                              padding: const pw.EdgeInsets.all(5),
+                              child: pw.Container(
+                                padding: const pw.EdgeInsets.symmetric(
+                                    vertical: 2, horizontal: 4),
+                                decoration: pw.BoxDecoration(
+                                  color: PdfColor.fromHex('#EFF6FF'),
+                                  borderRadius: const pw.BorderRadius.all(
+                                      pw.Radius.circular(3)),
+                                ),
+                                child: pw.Text(
+                                  error.widgetName,
+                                  style: pw.TextStyle(
+                                    fontSize: 7,
+                                    fontWeight: pw.FontWeight.bold,
+                                    color: PdfColor.fromHex('#1D4ED8'),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            _buildTableCell(
+                              error.isFormatIssue
+                                  ? 'Format Salah: ${error.errorMessage}'
+                                  : 'Lacks ID. Suggest: ${error.suggestion}',
+                              textColor: PdfColor.fromHex('#991B1B'),
+                              isBold: !error.isFormatIssue,
+                            ),
+                            pw.Padding(
+                              padding: const pw.EdgeInsets.all(5),
+                              child: pw.Container(
+                                padding: const pw.EdgeInsets.all(4),
+                                decoration: pw.BoxDecoration(
+                                  color: PdfColor.fromHex('#0F172A'),
+                                  borderRadius: const pw.BorderRadius.all(
+                                      pw.Radius.circular(4)),
+                                ),
+                                child: pw.Text(
+                                  error.codeSnippet,
+                                  style: pw.TextStyle(
+                                    fontSize: 6.5,
+                                    font: pw.Font.courier(),
+                                    color: PdfColor.fromHex('#E2E8F0'),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                    ],
+                  ),
+                  pw.SizedBox(height: 10),
+                ],
+
+                // Warnings Table
+                if (group.issues.where((i) => i.isWarning).isNotEmpty) ...[
+                  pw.Text('⚠️ Warnings to Review (${group.issues.where((i) => i.isWarning).length})',
+                      style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColor.fromHex('#B45309'))),
+                  pw.SizedBox(height: 3),
+                  pw.Table(
+                    border: pw.TableBorder.all(
+                        color: PdfColor.fromHex('#FDF6E2'), width: 0.5),
+                    columnWidths: {
+                      0: const pw.FixedColumnWidth(35),
+                      1: const pw.FixedColumnWidth(100),
+                      2: const pw.FixedColumnWidth(180),
+                      3: const pw.FlexColumnWidth(),
+                    },
+                    children: [
+                      pw.TableRow(
+                        decoration:
+                            pw.BoxDecoration(color: PdfColor.fromHex('#FFFDF5')),
+                        children: [
+                          _buildHeaderCell('Line', PdfColor.fromHex('#B45309')),
+                          _buildHeaderCell('Widget', PdfColor.fromHex('#B45309')),
+                          _buildHeaderCell('Warning / Suggested ID', PdfColor.fromHex('#B45309')),
+                          _buildHeaderCell('Code Snippet', PdfColor.fromHex('#B45309')),
+                        ],
+                      ),
+                      for (final warning in group.issues.where((i) => i.isWarning))
+                        pw.TableRow(
+                          decoration: const pw.BoxDecoration(color: PdfColors.white),
+                          children: [
+                            _buildTableCell('${warning.line}'),
+                            pw.Padding(
+                              padding: const pw.EdgeInsets.all(5),
+                              child: pw.Container(
+                                padding: const pw.EdgeInsets.symmetric(
+                                    vertical: 2, horizontal: 4),
+                                decoration: pw.BoxDecoration(
+                                  color: PdfColor.fromHex('#FEF3C7'),
+                                  borderRadius: const pw.BorderRadius.all(
+                                      pw.Radius.circular(3)),
+                                ),
+                                child: pw.Text(
+                                  warning.widgetName,
+                                  style: pw.TextStyle(
+                                    fontSize: 7,
+                                    fontWeight: pw.FontWeight.bold,
+                                    color: PdfColor.fromHex('#D97706'),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            _buildTableCell(
+                              'Default ID used. Suggest: ${warning.suggestion}',
+                              textColor: PdfColor.fromHex('#B45309'),
+                            ),
+                            pw.Padding(
+                              padding: const pw.EdgeInsets.all(5),
+                              child: pw.Container(
+                                padding: const pw.EdgeInsets.all(4),
+                                decoration: pw.BoxDecoration(
+                                  color: PdfColor.fromHex('#0F172A'),
+                                  borderRadius: const pw.BorderRadius.all(
+                                      pw.Radius.circular(4)),
+                                ),
+                                child: pw.Text(
+                                  warning.codeSnippet,
+                                  style: pw.TextStyle(
+                                    fontSize: 6.5,
+                                    font: pw.Font.courier(),
+                                    color: PdfColor.fromHex('#E2E8F0'),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                    ],
+                  ),
+                  pw.SizedBox(height: 10),
+                ],
               ],
             ],
           ];

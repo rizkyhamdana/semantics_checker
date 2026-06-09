@@ -24,7 +24,8 @@ class HtmlReporter {
       grouped.putIfAbsent(issue.filePath, () => []).add(issue);
     }
 
-    final sidebarItemsHtml = StringBuffer();
+    final sidebarErrorsHtml = StringBuffer();
+    final sidebarWarningsHtml = StringBuffer();
     final filePanelsHtml = StringBuffer();
 
     int fileIdx = 0;
@@ -38,22 +39,28 @@ class HtmlReporter {
           parts.length > 1 ? parts.sublist(0, parts.length - 1).join('/') : '';
 
       final fileErrorsCount = fileIssues.where((i) => !i.isWarning).length;
-      final badgeStyle = fileErrorsCount > 0 
-          ? 'background: var(--danger-light); color: var(--danger);'
-          : 'background: #FEF3C7; color: #D97706; border: 1px solid #FDE68A;';
+      final fileWarningsCount = fileIssues.where((i) => i.isWarning).length;
 
-      sidebarItemsHtml.write('''
+      final sidebarItem = '''
       <div class="sidebar-item" id="nav-$fileId" onclick="showFile('$fileId')" data-filepath="${filePath.toLowerCase()}">
         <div class="sidebar-item-info">
           <span class="file-name">$fileName</span>
           <span class="file-dir">$fileDir</span>
         </div>
-        <span class="badge-count" style="$badgeStyle">${fileIssues.length}</span>
+        <div style="display: flex; gap: 4px;">
+          ${fileErrorsCount > 0 ? '<span class="badge-count" style="background: var(--danger-light); color: var(--danger); font-size: 0.7em;">$fileErrorsCount E</span>' : ''}
+          ${fileWarningsCount > 0 ? '<span class="badge-count" style="background: #FEF3C7; color: #D97706; border: 1px solid #FDE68A; font-size: 0.7em;">$fileWarningsCount W</span>' : ''}
+        </div>
       </div>
-      ''');
+      ''';
 
-      final issueCardsHtml = StringBuffer();
-      for (final issue in fileIssues) {
+      if (fileErrorsCount > 0) {
+        sidebarErrorsHtml.write(sidebarItem);
+      } else {
+        sidebarWarningsHtml.write(sidebarItem);
+      }
+
+      String buildCardHtml(SemanticsIssue issue) {
         final escapedSnippet = issue.codeSnippet
             .replaceAll('&', '&amp;')
             .replaceAll('<', '&lt;')
@@ -108,8 +115,10 @@ class HtmlReporter {
                 ? 'style="background: #FFF7ED; color: #EA580C; border-color: #FED7AA;"'
                 : '';
 
-        issueCardsHtml.write('''
-        <div class="issue-card">
+        final cardBorderClass = issue.isWarning ? 'warning' : 'error';
+
+        return '''
+        <div class="issue-card $cardBorderClass">
           <div class="issue-header" onclick="toggleIssue(this)">
             <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
               <span class="line-badge">Line ${issue.line}</span>
@@ -132,7 +141,30 @@ class HtmlReporter {
             </div>
           </div>
         </div>
-        ''');
+        ''';
+      }
+
+      final fileErrors = fileIssues.where((i) => !i.isWarning).toList();
+      final fileWarnings = fileIssues.where((i) => i.isWarning).toList();
+
+      final errorsHtml = StringBuffer();
+      if (fileErrors.isNotEmpty) {
+        errorsHtml.write('<h3 class="section-title error-title" style="color: var(--danger); margin: 16px 0 8px 0; font-size: 1.1em; display: flex; align-items: center; gap: 8px;"><span>❌</span> Errors to Fix (${fileErrors.length})</h3>');
+        errorsHtml.write('<div class="issues-list">');
+        for (final issue in fileErrors) {
+          errorsHtml.write(buildCardHtml(issue));
+        }
+        errorsHtml.write('</div>');
+      }
+
+      final warningsHtml = StringBuffer();
+      if (fileWarnings.isNotEmpty) {
+        warningsHtml.write('<h3 class="section-title warning-title" style="color: #D97706; margin: 24px 0 8px 0; font-size: 1.1em; display: flex; align-items: center; gap: 8px;"><span>⚠️</span> Warnings (${fileWarnings.length})</h3>');
+        warningsHtml.write('<div class="issues-list">');
+        for (final issue in fileWarnings) {
+          warningsHtml.write(buildCardHtml(issue));
+        }
+        warningsHtml.write('</div>');
       }
 
       filePanelsHtml.write('''
@@ -150,8 +182,9 @@ class HtmlReporter {
             <button class="btn" onclick="toggleAllAccordions('$fileId', false)">Collapse All</button>
           </div>
         </div>
-        <div class="issues-list">
-          $issueCardsHtml
+        <div class="file-issues-content" style="display: flex; flex-direction: column; gap: 8px;">
+          $errorsHtml
+          $warningsHtml
         </div>
       </div>
       ''');
@@ -635,6 +668,14 @@ class HtmlReporter {
       transition: box-shadow 0.2s, border-color 0.2s;
     }
 
+    .issue-card.error {
+      border-left: 4px solid #EF4444;
+    }
+
+    .issue-card.warning {
+      border-left: 4px solid #F59E0B;
+    }
+
     .issue-card.expanded {
       border-color: #CBD5E1;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
@@ -880,8 +921,20 @@ class HtmlReporter {
           <span class="badge-count" style="background: var(--success-light); color: var(--success);">${fixedList.length}</span>
         </div>
         
-        <div class="sidebar-section-title" style="border-top: 1px solid var(--border-color); margin-top: 8px; padding-top: 12px;">Remaining Issues</div>
-        $sidebarItemsHtml
+        <!-- Sidebar Sections -->
+        <div class="sidebar-section-title" id="errors-section-title" style="border-top: 1px solid var(--border-color); margin-top: 8px; padding-top: 12px; color: var(--danger); display: flex; align-items: center; gap: 6px;">
+          <span>❌</span> Files with Errors (${grouped.values.where((list) => list.any((i) => !i.isWarning)).length})
+        </div>
+        <div id="sidebar-errors-list">
+          $sidebarErrorsHtml
+        </div>
+
+        <div class="sidebar-section-title" id="warnings-section-title" style="border-top: 1px solid var(--border-color); margin-top: 8px; padding-top: 12px; color: #D97706; display: flex; align-items: center; gap: 6px;">
+          <span>⚠️</span> Files with Warnings Only (${grouped.values.where((list) => list.every((i) => i.isWarning)).length})
+        </div>
+        <div id="sidebar-warnings-list">
+          $sidebarWarningsHtml
+        </div>
       </div>
     </aside>
 
