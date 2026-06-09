@@ -57,7 +57,7 @@ Tambahkan package ini ke bagian `dev_dependencies` di dalam berkas `pubspec.yaml
 ```yaml
 dev_dependencies:
   semantics_checker:
-    git: https://github.com/rizkyhamdana/semantics_checker.git
+    git: https://git.pactindo.com/baso.rizky/semantics_checker.git
 ```
 
 Jalankan perintah berikut di proyek Flutter Anda untuk mengunduh package:
