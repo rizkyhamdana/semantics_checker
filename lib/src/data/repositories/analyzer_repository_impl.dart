@@ -25,6 +25,25 @@ class AnalyzerRepositoryImpl implements AnalyzerRepository {
   @override
   Future<List<SemanticsIssue>> analyzeFiles(List<String> filePaths, SemanticsConfig config) async {
     final allIssues = <SemanticsIssue>[];
+    final widgetsWithDefaults = <String, bool>{};
+
+    try {
+      // 1. Pre-scan all local Dart files to find class definitions and build defaults map
+      final allFiles = await listAllDartFiles('lib', config);
+      for (final file in allFiles) {
+        if (!fileDatasource.fileExists(file)) continue;
+        try {
+          final content = await fileDatasource.readFileAsString(file);
+          final parseResult = fileDatasource.parseDartString(content);
+          
+          final classVisitor = _ClassDefinitionVisitor(config.targetWidgets, config.semanticsProperties);
+          parseResult.unit.accept(classVisitor);
+          widgetsWithDefaults.addAll(classVisitor.widgetsWithDefaults);
+        } catch (_) {}
+      }
+    } catch (_) {}
+
+    // 2. Perform main call site analysis
     for (final file in filePaths) {
       if (!fileDatasource.fileExists(file)) continue;
       try {
@@ -39,6 +58,7 @@ class AnalyzerRepositoryImpl implements AnalyzerRepository {
           config.semanticsProperties,
           config.defaultWidgets,
           config.defaultIdentifiers,
+          widgetsWithDefaults,
         );
         parseResult.unit.accept(visitor);
         allIssues.addAll(visitor.issues);
@@ -56,6 +76,7 @@ class _SemanticsVisitor extends RecursiveAstVisitor<void> {
   final List<String> semanticsProperties;
   final List<String> defaultWidgets;
   final List<String> defaultIdentifiers;
+  final Map<String, bool> dynamicallyDetectedDefaults;
   final List<SemanticsIssue> issues = [];
 
   _SemanticsVisitor(
@@ -66,6 +87,7 @@ class _SemanticsVisitor extends RecursiveAstVisitor<void> {
     this.semanticsProperties,
     this.defaultWidgets,
     this.defaultIdentifiers,
+    this.dynamicallyDetectedDefaults,
   );
 
   void _checkWidget(String name, ArgumentList argumentList, AstNode node) {
@@ -175,7 +197,7 @@ class _SemanticsVisitor extends RecursiveAstVisitor<void> {
         snippet = fileLines.sublist(startLineIdx, endLineIdx).map((l) => l.trim()).join('\n');
       } catch (_) {}
 
-      final isDefaultWidget = defaultWidgets.contains(name);
+      final isDefaultWidget = defaultWidgets.contains(name) || (dynamicallyDetectedDefaults[name] ?? false);
       final isDefaultId = semanticsValue != null && defaultIdentifiers.contains(semanticsValue);
 
       // Kasus 1: Sama sekali tidak ada Semantics ID
@@ -353,5 +375,102 @@ class _SemanticsVisitor extends RecursiveAstVisitor<void> {
     final name = node.constructorName.toSource().split('.').first;
     _checkWidget(name, node.argumentList, node);
     super.visitInstanceCreationExpression(node);
+  }
+}
+
+class _ClassDefinitionVisitor extends RecursiveAstVisitor<void> {
+  final List<String> targetWidgets;
+  final List<String> semanticsProperties;
+  final Map<String, bool> widgetsWithDefaults = {};
+
+  _ClassDefinitionVisitor(this.targetWidgets, this.semanticsProperties);
+
+  @override
+  void visitClassDeclaration(ClassDeclaration node) {
+    final className = node.name.lexeme;
+    if (!targetWidgets.contains(className)) {
+      super.visitClassDeclaration(node);
+      return;
+    }
+
+    bool hasDefault = false;
+
+    // 1. Check constructor parameters for defaults
+    for (final member in node.members) {
+      if (member is ConstructorDeclaration) {
+        for (final param in member.parameters.parameters) {
+          if (param is DefaultFormalParameter) {
+            final paramName = param.name?.lexeme ?? '';
+            if (semanticsProperties.contains(paramName)) {
+              if (param.defaultValue != null) {
+                hasDefault = true;
+                break;
+              }
+            }
+          }
+        }
+      }
+      if (hasDefault) break;
+    }
+
+    // 2. Check build method body for Semantics wrapping with defaults
+    if (!hasDefault) {
+      for (final member in node.members) {
+        if (member is MethodDeclaration && member.name.lexeme == 'build') {
+          final buildVisitor = _SemanticsCheckInBuildVisitor(semanticsProperties);
+          member.accept(buildVisitor);
+          if (buildVisitor.hasDefaultSemanticsValue) {
+            hasDefault = true;
+            break;
+          }
+        }
+      }
+    }
+
+    widgetsWithDefaults[className] = hasDefault;
+    super.visitClassDeclaration(node);
+  }
+}
+
+class _SemanticsCheckInBuildVisitor extends RecursiveAstVisitor<void> {
+  final List<String> semanticsProperties;
+  bool hasDefaultSemanticsValue = false;
+
+  _SemanticsCheckInBuildVisitor(this.semanticsProperties);
+
+  @override
+  void visitInstanceCreationExpression(InstanceCreationExpression node) {
+    final name = node.constructorName.toSource().split('.').first;
+    if (name == 'Semantics') {
+      _checkSemanticsArguments(node.argumentList);
+    }
+    super.visitInstanceCreationExpression(node);
+  }
+
+  @override
+  void visitMethodInvocation(MethodInvocation node) {
+    final name = node.methodName.toSource();
+    if (name == 'Semantics') {
+      _checkSemanticsArguments(node.argumentList);
+    }
+    super.visitMethodInvocation(node);
+  }
+
+  void _checkSemanticsArguments(ArgumentList argumentList) {
+    for (final arg in argumentList.arguments) {
+      if (arg is NamedExpression) {
+        final paramName = arg.name.label.name;
+        if (paramName == 'identifier') {
+          final expr = arg.expression;
+          if (expr is BinaryExpression && expr.operator.lexeme == '??') {
+            if (expr.rightOperand is SimpleStringLiteral) {
+              hasDefaultSemanticsValue = true;
+            }
+          } else if (expr is SimpleStringLiteral) {
+            hasDefaultSemanticsValue = true;
+          }
+        }
+      }
+    }
   }
 }
