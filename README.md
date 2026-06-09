@@ -92,13 +92,25 @@ exclude_paths:
 # [KUSTOM] Format RegExp untuk memvalidasi penamaan ID (default: snake_case)
 id_pattern: "^[a-z0-9_]+$"
 
-# [KUSTOM] Daftar nama properti parameter widget yang dianggap sebagai penanda Semantics ID
+# Daftar nama properti parameter widget yang dianggap sebagai penanda Semantics ID
 semantics_properties:
   - semanticsIdentifier
   - identifier
   - identifierId
   - semanticsId
   - testId # Contoh properti kustom baru pada widget Anda
+
+# [KUSTOM] Daftar nama widget yang memiliki default identifier internal
+# Widget yang didaftarkan di sini hanya akan memicu WARNING (bukan ERROR) saat dipanggil tanpa parameter semantics ID
+default_widgets:
+  - CustomButton
+  - CustomButtonAnimationLoading
+
+# [KUSTOM] Daftar nilai identifier default/fallback yang akan memicu WARNING jika digunakan
+default_identifiers:
+  - "btn_default"
+  - "btn_next"
+  - "input_default"
 ```
 
 ---
