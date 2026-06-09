@@ -15,7 +15,23 @@ class GitRepositoryImpl implements GitRepository {
   @override
   Future<List<String>> getChangedFiles() async {
     try {
-      final diffResult = await gitDatasource.runCommand(['diff', '--name-only', 'HEAD']);
+      List<String> diffResult = [];
+      
+      // Deteksi branch utama untuk dibandingkan (main, development, master)
+      for (final baseBranch in ['main', 'development', 'master']) {
+        try {
+          // git diff --name-only baseBranch...HEAD mendeteksi semua file yang dimodifikasi di branch aktif
+          // sejak bercabang dari baseBranch (termasuk commit lokal)
+          diffResult = await gitDatasource.runCommand(['diff', '--name-only', '$baseBranch...HEAD']);
+          if (diffResult.isNotEmpty) break;
+        } catch (_) {}
+      }
+
+      // Jika tidak ada branch perbandingan atau kita berada di branch utama, fallback ke perubahan lokal
+      if (diffResult.isEmpty) {
+        diffResult = await gitDatasource.runCommand(['diff', '--name-only', 'HEAD']);
+      }
+
       final untrackedResult = await gitDatasource.runCommand(['ls-files', '--others', '--exclude-standard']);
       return {...diffResult, ...untrackedResult}.toList();
     } catch (_) {
