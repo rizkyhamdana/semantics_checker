@@ -31,7 +31,15 @@ class AnalyzerRepositoryImpl implements AnalyzerRepository {
         final content = await fileDatasource.readFileAsString(file);
         final parseResult = fileDatasource.parseDartString(content);
         
-        final visitor = _SemanticsVisitor(file, content, config.targetWidgets, config.idPattern, config.semanticsProperties);
+        final visitor = _SemanticsVisitor(
+          file,
+          content,
+          config.targetWidgets,
+          config.idPattern,
+          config.semanticsProperties,
+          config.defaultWidgets,
+          config.defaultIdentifiers,
+        );
         parseResult.unit.accept(visitor);
         allIssues.addAll(visitor.issues);
       } catch (_) {}
@@ -46,9 +54,19 @@ class _SemanticsVisitor extends RecursiveAstVisitor<void> {
   final List<String> targetWidgets;
   final String idPattern;
   final List<String> semanticsProperties;
+  final List<String> defaultWidgets;
+  final List<String> defaultIdentifiers;
   final List<SemanticsIssue> issues = [];
 
-  _SemanticsVisitor(this.filePath, this.fileContent, this.targetWidgets, this.idPattern, this.semanticsProperties);
+  _SemanticsVisitor(
+    this.filePath,
+    this.fileContent,
+    this.targetWidgets,
+    this.idPattern,
+    this.semanticsProperties,
+    this.defaultWidgets,
+    this.defaultIdentifiers,
+  );
 
   void _checkWidget(String name, ArgumentList argumentList, AstNode node) {
     if (targetWidgets.contains(name)) {
@@ -157,6 +175,9 @@ class _SemanticsVisitor extends RecursiveAstVisitor<void> {
         snippet = fileLines.sublist(startLineIdx, endLineIdx).map((l) => l.trim()).join('\n');
       } catch (_) {}
 
+      final isDefaultWidget = defaultWidgets.contains(name);
+      final isDefaultId = semanticsValue != null && defaultIdentifiers.contains(semanticsValue);
+
       // Kasus 1: Sama sekali tidak ada Semantics ID
       if (!hasSemantics) {
         String suggestionSnippet = '';
@@ -174,9 +195,34 @@ class _SemanticsVisitor extends RecursiveAstVisitor<void> {
           suggestion: suggestion,
           codeSnippet: snippet,
           isFormatIssue: false,
+          isWarning: isDefaultWidget,
+          errorMessage: isDefaultWidget 
+              ? 'Widget "$name" tidak memiliki semantics identifier unik (menggunakan nilai default widget).'
+              : null,
         ));
       } 
-      // Kasus 2: Ada Semantics ID tetapi salah format berdasarkan RegExp config
+      // Kasus 2: Ada Semantics ID tetapi menggunakan default identifier
+      else if (isDefaultId) {
+        String suggestionSnippet = '';
+        try {
+          final endOffset = (node.offset + 1500 < fileContent.length) ? node.offset + 1500 : fileContent.length;
+          suggestionSnippet = fileContent.substring(node.offset, endOffset);
+        } catch (_) {}
+
+        final suggestion = _suggestIdentifier(name, suggestionSnippet);
+
+        issues.add(SemanticsIssue(
+          filePath: filePath,
+          line: line,
+          widgetName: name,
+          suggestion: suggestion,
+          codeSnippet: snippet,
+          isFormatIssue: false,
+          isWarning: true,
+          errorMessage: 'Widget "$name" menggunakan default identifier "$semanticsValue". Harap ganti dengan identifier unik.',
+        ));
+      }
+      // Kasus 3: Ada Semantics ID tetapi salah format berdasarkan RegExp config
       else if (semanticsValue != null) {
         // Bersihkan interpolasi string dinamis (seperti $index, ${index}) agar tidak merusak validasi regex standar
         final cleanValue = semanticsValue
@@ -193,6 +239,7 @@ class _SemanticsVisitor extends RecursiveAstVisitor<void> {
             codeSnippet: snippet,
             isFormatIssue: true,
             errorMessage: 'Format identifier "$semanticsValue" tidak valid (harus sesuai pattern: $idPattern)',
+            isWarning: false,
           ));
         }
       }

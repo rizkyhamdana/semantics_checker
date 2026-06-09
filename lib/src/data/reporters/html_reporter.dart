@@ -9,8 +9,14 @@ class HtmlReporter {
     List<FixedSemanticsItem> fixedList,
     String dirPath,
   ) async {
-    final statusColor = issues.isEmpty ? '#10B981' : '#EF4444';
-    final statusText = issues.isEmpty ? 'PASSED' : 'FAILED';
+    final errors = issues.where((i) => !i.isWarning).toList();
+    final warnings = issues.where((i) => i.isWarning).toList();
+    final statusColor = errors.isNotEmpty
+        ? '#EF4444'
+        : (warnings.isNotEmpty ? '#F59E0B' : '#10B981');
+    final statusText = errors.isNotEmpty
+        ? 'FAILED'
+        : (warnings.isNotEmpty ? 'WARNINGS' : 'PASSED');
     final brandLogoSvg = BrandIdentity.reportLogoSvg;
 
     final Map<String, List<SemanticsIssue>> grouped = {};
@@ -31,13 +37,18 @@ class HtmlReporter {
       final fileDir =
           parts.length > 1 ? parts.sublist(0, parts.length - 1).join('/') : '';
 
+      final fileErrorsCount = fileIssues.where((i) => !i.isWarning).length;
+      final badgeStyle = fileErrorsCount > 0 
+          ? 'background: var(--danger-light); color: var(--danger);'
+          : 'background: #FEF3C7; color: #D97706; border: 1px solid #FDE68A;';
+
       sidebarItemsHtml.write('''
       <div class="sidebar-item" id="nav-$fileId" onclick="showFile('$fileId')" data-filepath="${filePath.toLowerCase()}">
         <div class="sidebar-item-info">
           <span class="file-name">$fileName</span>
           <span class="file-dir">$fileDir</span>
         </div>
-        <span class="badge-count">${fileIssues.length}</span>
+        <span class="badge-count" style="$badgeStyle">${fileIssues.length}</span>
       </div>
       ''');
 
@@ -52,37 +63,57 @@ class HtmlReporter {
             .replaceAll('\n', '<br/>')
             .replaceAll(' ', '&nbsp;');
 
-        final suggestionBlock = issue.isFormatIssue 
+        final suggestionBlock = issue.isWarning
             ? '''
-              <div class="suggestion-wrapper" style="background: var(--danger-light); border-color: #FECACA;">
-                <span class="suggestion-prefix" style="color: #DC2626;">Error:</span>
-                <span class="suggestion-val" style="color: var(--danger); font-family: sans-serif;">${issue.errorMessage}</span>
+              <div class="suggestion-wrapper" style="background: #FEF3C7; border-color: #FDE68A;">
+                <span class="suggestion-prefix" style="color: #B45309;">Warning:</span>
+                <span class="suggestion-val" style="color: #D97706; font-family: sans-serif;">${issue.errorMessage ?? "Menggunakan default identifier"}</span>
               </div>
               '''
-            : '''
-              <div class="suggestion-wrapper">
-                <span class="suggestion-prefix">Suggest:</span>
-                <span class="suggestion-val">${issue.suggestion}</span>
-              </div>
-              ''';
+            : issue.isFormatIssue 
+                ? '''
+                  <div class="suggestion-wrapper" style="background: var(--danger-light); border-color: #FECACA;">
+                    <span class="suggestion-prefix" style="color: #DC2626;">Error:</span>
+                    <span class="suggestion-val" style="color: var(--danger); font-family: sans-serif;">${issue.errorMessage}</span>
+                  </div>
+                  '''
+                : '''
+                  <div class="suggestion-wrapper">
+                    <span class="suggestion-prefix">Suggest:</span>
+                    <span class="suggestion-val">${issue.suggestion}</span>
+                  </div>
+                  ''';
 
-        final actionButton = issue.isFormatIssue 
+        final actionButton = issue.isWarning
             ? '''
-              <span class="badge-count" style="background: var(--danger-light); color: var(--danger); font-size: 0.8em; border-radius: 6px;">Perlu Diubah</span>
-              '''
-            : '''
-              <button class="btn-copy" onclick="copyId(event, '${issue.suggestion}')">
+              <button class="btn-copy" onclick="copyId(event, '${issue.suggestion}')" style="color: #D97706; background: #FEF3C7;">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                 Copy ID
               </button>
-              ''';
+              '''
+            : issue.isFormatIssue 
+                ? '''
+                  <span class="badge-count" style="background: var(--danger-light); color: var(--danger); font-size: 0.8em; border-radius: 6px;">Perlu Diubah</span>
+                  '''
+                : '''
+                  <button class="btn-copy" onclick="copyId(event, '${issue.suggestion}')">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                    Copy ID
+                  </button>
+                  ''';
+
+        final widgetBadgeStyle = issue.isWarning
+            ? 'style="background: #FEF3C7; color: #D97706; border-color: #FDE68A;"'
+            : issue.isFormatIssue
+                ? 'style="background: #FFF7ED; color: #EA580C; border-color: #FED7AA;"'
+                : '';
 
         issueCardsHtml.write('''
         <div class="issue-card">
           <div class="issue-header" onclick="toggleIssue(this)">
             <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
               <span class="line-badge">Line ${issue.line}</span>
-              <span class="widget-badge" ${issue.isFormatIssue ? 'style="background: #FFF7ED; color: #EA580C; border-color: #FED7AA;"' : ''}>${issue.widgetName}</span>
+              <span class="widget-badge" $widgetBadgeStyle>${issue.widgetName}</span>
               $suggestionBlock
             </div>
             <div style="display: flex; align-items: center; gap: 12px;">
@@ -865,8 +896,12 @@ class HtmlReporter {
         
         <div class="stats-grid">
           <div class="stat-card danger">
-            <span class="stat-card-title">Remaining Issues</span>
-            <span class="stat-card-value">${issues.length}</span>
+            <span class="stat-card-title">Remaining Errors</span>
+            <span class="stat-card-value">${errors.length}</span>
+          </div>
+          <div class="stat-card warning" style="border-color: #FDE68A; background: #FFFDF5;">
+            <span class="stat-card-title" style="color: #B45309;">Warnings</span>
+            <span class="stat-card-value" style="color: #D97706;">${warnings.length}</span>
           </div>
           <div class="stat-card">
             <span class="stat-card-title">Affected Files</span>

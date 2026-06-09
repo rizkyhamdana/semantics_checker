@@ -53,27 +53,39 @@ class CliRunner {
       );
 
       // 3. Print issues in console
+      final errors = result.issues.where((i) => !i.isWarning).toList();
+      final warnings = result.issues.where((i) => i.isWarning).toList();
+
       if (result.issues.isNotEmpty) {
         for (final issue in result.issues) {
           print('\n📄 File: ${issue.filePath}');
-          if (issue.isFormatIssue) {
-            print('  [Baris ${issue.line}] ⚠️ ${issue.errorMessage}');
+          if (issue.isWarning) {
+            print('  [Baris ${issue.line}] ⚠️ [WARNING] Widget "${issue.widgetName}": ${issue.errorMessage ?? "Missing semantics identifier (uses default widget value)."}');
+            if (issue.suggestion.isNotEmpty) {
+              print('    👉 Suggested unique ID: "${issue.suggestion}"');
+            }
+          } else if (issue.isFormatIssue) {
+            print('  [Baris ${issue.line}] ❌ [ERROR] ${issue.errorMessage}');
           } else {
-            print('  [Baris ${issue.line}] Widget "${issue.widgetName}" lacks semantics identifier.');
+            print('  [Baris ${issue.line}] ❌ [ERROR] Widget "${issue.widgetName}" lacks semantics identifier.');
             print('    👉 Suggested placeholder ID: "${issue.suggestion}"');
           }
         }
       }
 
       print('\n=======================================');
-      if (result.issues.isNotEmpty) {
-        print('❌ Audit failed: Found ${result.issues.length} missing semantics identifier(s).');
+      if (errors.isNotEmpty) {
+        print('❌ Audit failed: Found ${errors.length} error(s) and ${warnings.length} warning(s).');
         exit(1);
       } else {
-        if (scanAll) {
-          print('🎉 Audit passed: All interactive widgets in the project have semantics identifiers!');
+        if (warnings.isNotEmpty) {
+          print('⚠️ Audit passed with warnings: Found ${warnings.length} warning(s). No blocking errors.');
         } else {
-          print('🎉 Audit passed: All changed interactive widgets have semantics identifiers!');
+          if (scanAll) {
+            print('🎉 Audit passed: All interactive widgets in the project have semantics identifiers!');
+          } else {
+            print('🎉 Audit passed: All changed interactive widgets have semantics identifiers!');
+          }
         }
         exit(0);
       }

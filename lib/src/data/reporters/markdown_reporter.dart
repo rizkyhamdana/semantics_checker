@@ -17,11 +17,18 @@ class MarkdownReporter {
     buffer.writeln('\n# ${BrandIdentity.reportTitle}\n');
     buffer.writeln('**${BrandIdentity.tagline}**\n');
 
+    final errors = issues.where((i) => !i.isWarning).toList();
+    final warnings = issues.where((i) => i.isWarning).toList();
+
     // 1. Alert Status Banner
-    if (issues.isNotEmpty) {
+    if (errors.isNotEmpty) {
       buffer.writeln('> [!WARNING]');
       buffer.writeln(
-          '> **AUDIT FAILED**: Found ${issues.length} interactive elements lacking semantics identifiers.');
+          '> **AUDIT FAILED**: Found ${errors.length} error(s) and ${warnings.length} warning(s) in interactive elements.');
+    } else if (warnings.isNotEmpty) {
+      buffer.writeln('> [!IMPORTANT]');
+      buffer.writeln(
+          '> **AUDIT PASSED WITH WARNINGS**: Found ${warnings.length} warning(s). No blocking errors were detected, but some widgets are using default identifiers.');
     } else {
       buffer.writeln('> [!NOTE]');
       buffer.writeln(
@@ -34,7 +41,9 @@ class MarkdownReporter {
     buffer.writeln('| Metric | Value | Status |');
     buffer.writeln('| --- | --- | --- |');
     buffer.writeln(
-        '| **Remaining Issues** | `${issues.length}` | ${issues.isEmpty ? "🟢 Passed" : "🔴 Action Required"} |');
+        '| **Remaining Errors** | `${errors.length}` | ${errors.isEmpty ? "🟢 Passed" : "🔴 Action Required"} |');
+    buffer.writeln(
+        '| **Warnings** | `${warnings.length}` | ${warnings.isEmpty ? "🟢 None" : "⚠️ Review"} |');
     buffer.writeln(
         '| **Affected Files** | `${_groupIssuesByFile(issues).length}` | ${issues.isEmpty ? "🟢 None" : "⚠️ Review"} |');
     buffer.writeln(
@@ -71,8 +80,8 @@ class MarkdownReporter {
         buffer.writeln('<br/>\n');
 
         buffer.writeln(
-            '| Line | Widget | Suggested Semantics ID | Code Snippet |');
-        buffer.writeln('| :---: | :--- | :--- | :--- |');
+            '| Line | Widget | Type | Suggested/Error Message | Code Snippet |');
+        buffer.writeln('| :---: | :--- | :---: | :--- | :--- |');
 
         for (final issue in group.issues) {
           final singleLineCode = issue.codeSnippet
@@ -83,23 +92,28 @@ class MarkdownReporter {
               ? '${singleLineCode.substring(0, 47)}...'
               : singleLineCode;
 
-          final displaySuggestion = issue.isFormatIssue 
-              ? '❌ _Format Salah_' 
-              : '**`${issue.suggestion}`**';
+          final typeLabel = issue.isWarning ? '⚠️ Warning' : '❌ Error';
+          final displaySuggestion = issue.isWarning
+              ? 'Uses default identifier. Suggest unique: **`${issue.suggestion}`**'
+              : issue.isFormatIssue 
+                  ? '_Format Salah_: ${issue.errorMessage}' 
+                  : 'Lacks Semantics ID. Suggest: **`${issue.suggestion}`**';
 
           buffer.writeln(
-              '| **${issue.line}** | `${issue.widgetName}` | $displaySuggestion | `${formattedCodeSnippet}` |');
+              '| **${issue.line}** | `${issue.widgetName}` | $typeLabel | $displaySuggestion | `${formattedCodeSnippet}` |');
         }
 
         buffer.writeln('\n');
         buffer.writeln('#### Detailed Code View\n');
         for (final issue in group.issues) {
-          if (issue.isFormatIssue) {
-            buffer.writeln(
-                '**Line ${issue.line}** - `${issue.widgetName}` (⚠️ ${issue.errorMessage}):');
-          } else {
-            buffer.writeln(
-                '**Line ${issue.line}** - `${issue.widgetName}` (Suggested: `${issue.suggestion}`):');
+          final prefix = issue.isWarning ? '⚠️ WARNING' : '❌ ERROR';
+          final message = issue.errorMessage ?? (issue.isWarning 
+              ? 'Widget lacks unique semantics identifier (uses default widget value)' 
+              : 'Widget lacks semantics identifier');
+          buffer.writeln(
+              '**Line ${issue.line}** - `${issue.widgetName}` ($prefix: $message):');
+          if (issue.suggestion.isNotEmpty) {
+            buffer.writeln('Suggested unique ID: `${issue.suggestion}`');
           }
           buffer.writeln('```dart');
           buffer.writeln(issue.codeSnippet.trim());

@@ -13,6 +13,8 @@ class ConfigRepositoryImpl implements ConfigRepository {
     final targets = <String>[];
     final excludes = <String>[];
     final semanticsProps = <String>[];
+    final defaultWgts = <String>[];
+    final defaultIds = <String>[];
     String idPattern = '^[a-z0-9_]+\$'; // Default snake_case regex
 
     if (fileDatasource.fileExists(configPath)) {
@@ -31,6 +33,12 @@ class ConfigRepositoryImpl implements ConfigRepository {
           }
           if (doc['id_pattern'] != null && doc['id_pattern'] is String) {
             idPattern = doc['id_pattern'] as String;
+          }
+          if (doc['default_widgets'] != null && doc['default_widgets'] is YamlList) {
+            defaultWgts.addAll(List<String>.from(doc['default_widgets']));
+          }
+          if (doc['default_identifiers'] != null && doc['default_identifiers'] is YamlList) {
+            defaultIds.addAll(List<String>.from(doc['default_identifiers']));
           }
         }
       } catch (_) {}
@@ -72,6 +80,8 @@ class ConfigRepositoryImpl implements ConfigRepository {
       excludePaths: excludes,
       idPattern: idPattern,
       semanticsProperties: semanticsProps,
+      defaultWidgets: defaultWgts,
+      defaultIdentifiers: defaultIds,
     );
   }
 }

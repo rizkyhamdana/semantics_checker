@@ -118,7 +118,7 @@ class PdfReporter {
             ),
             pw.SizedBox(height: 15),
 
-            // Statistics Grid (3 Columns)
+            // Statistics Grid (4 Columns)
             pw.Row(
               children: [
                 pw.Expanded(
@@ -134,17 +134,46 @@ class PdfReporter {
                     child: pw.Column(
                       crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
-                        pw.Text('REMAINING ISSUES',
+                        pw.Text('REMAINING ERRORS',
                             style: pw.TextStyle(
                                 fontSize: 7,
                                 fontWeight: pw.FontWeight.bold,
                                 color: PdfColor.fromHex('#991B1B'))),
                         pw.SizedBox(height: 4),
-                        pw.Text('${issues.length}',
+                        pw.Text('${issues.where((i) => !i.isWarning).length}',
                             style: pw.TextStyle(
                                 fontSize: 20,
                                 fontWeight: pw.FontWeight.bold,
                                 color: PdfColor.fromHex('#991B1B'))),
+                      ],
+                    ),
+                  ),
+                ),
+                pw.SizedBox(width: 12),
+                pw.Expanded(
+                  child: pw.Container(
+                    padding: const pw.EdgeInsets.all(12),
+                    decoration: pw.BoxDecoration(
+                      color: PdfColor.fromHex('#FFFBEB'),
+                      borderRadius:
+                          const pw.BorderRadius.all(pw.Radius.circular(6)),
+                      border: pw.Border.all(
+                          color: PdfColor.fromHex('#FDE68A'), width: 0.5),
+                    ),
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text('WARNINGS',
+                            style: pw.TextStyle(
+                                fontSize: 7,
+                                fontWeight: pw.FontWeight.bold,
+                                color: PdfColor.fromHex('#B45309'))),
+                        pw.SizedBox(height: 4),
+                        pw.Text('${issues.where((i) => i.isWarning).length}',
+                            style: pw.TextStyle(
+                                fontSize: 20,
+                                fontWeight: pw.FontWeight.bold,
+                                color: PdfColor.fromHex('#B45309'))),
                       ],
                     ),
                   ),
@@ -267,6 +296,7 @@ class PdfReporter {
             ],
 
             // Remaining Issues Grouped by File
+            // Remaining Issues Grouped by File
             if (issues.isNotEmpty) ...[
               pw.Text(
                 'x Remaining Issues requiring Action',
@@ -307,9 +337,10 @@ class PdfReporter {
                       color: PdfColor.fromHex('#F1F5F9'), width: 0.5),
                   columnWidths: {
                     0: const pw.FixedColumnWidth(35),
-                    1: const pw.FixedColumnWidth(110),
-                    2: const pw.FixedColumnWidth(140),
-                    3: const pw.FlexColumnWidth(),
+                    1: const pw.FixedColumnWidth(90),
+                    2: const pw.FixedColumnWidth(50),
+                    3: const pw.FixedColumnWidth(140),
+                    4: const pw.FlexColumnWidth(),
                   },
                   children: [
                     pw.TableRow(
@@ -318,10 +349,9 @@ class PdfReporter {
                       children: [
                         _buildHeaderCell('Line', PdfColor.fromHex('#991B1B')),
                         _buildHeaderCell('Widget', PdfColor.fromHex('#991B1B')),
-                        _buildHeaderCell(
-                            'Suggested ID', PdfColor.fromHex('#991B1B')),
-                        _buildHeaderCell(
-                            'Code Snippet', PdfColor.fromHex('#991B1B')),
+                        _buildHeaderCell('Type', PdfColor.fromHex('#991B1B')),
+                        _buildHeaderCell('Message/Suggested', PdfColor.fromHex('#991B1B')),
+                        _buildHeaderCell('Code Snippet', PdfColor.fromHex('#991B1B')),
                       ],
                     ),
                     for (int i = 0; i < group.issues.length; i++)
@@ -339,7 +369,9 @@ class PdfReporter {
                               padding: const pw.EdgeInsets.symmetric(
                                   vertical: 2, horizontal: 4),
                               decoration: pw.BoxDecoration(
-                                color: PdfColor.fromHex('#EFF6FF'),
+                                color: group.issues[i].isWarning
+                                    ? PdfColor.fromHex('#FEF3C7')
+                                    : PdfColor.fromHex('#EFF6FF'),
                                 borderRadius: const pw.BorderRadius.all(
                                     pw.Radius.circular(3)),
                               ),
@@ -348,13 +380,29 @@ class PdfReporter {
                                 style: pw.TextStyle(
                                   fontSize: 7,
                                   fontWeight: pw.FontWeight.bold,
-                                  color: PdfColor.fromHex('#1D4ED8'),
+                                  color: group.issues[i].isWarning
+                                      ? PdfColor.fromHex('#D97706')
+                                      : PdfColor.fromHex('#1D4ED8'),
                                 ),
                               ),
                             ),
                           ),
-                          _buildTableCell(group.issues[i].suggestion,
-                              isGreenText: true),
+                          _buildTableCell(
+                            group.issues[i].isWarning ? 'Warning' : 'Error',
+                            textColor: group.issues[i].isWarning ? PdfColor.fromHex('#D97706') : PdfColor.fromHex('#991B1B'),
+                            isBold: true,
+                          ),
+                          _buildTableCell(
+                            group.issues[i].isWarning
+                                ? 'Default ID. Suggest: ${group.issues[i].suggestion}'
+                                : group.issues[i].isFormatIssue
+                                    ? 'Format Salah: ${group.issues[i].errorMessage}'
+                                    : 'Lacks ID. Suggest: ${group.issues[i].suggestion}',
+                            textColor: group.issues[i].isWarning
+                                ? PdfColor.fromHex('#B45309')
+                                : (group.issues[i].isFormatIssue ? PdfColor.fromHex('#991B1B') : PdfColors.green800),
+                            isBold: !group.issues[i].isWarning && !group.issues[i].isFormatIssue,
+                          ),
                           pw.Padding(
                             padding: const pw.EdgeInsets.all(5),
                             child: pw.Container(
@@ -433,7 +481,7 @@ class PdfReporter {
   }
 
   static pw.Widget _buildTableCell(String text,
-      {bool isBold = false, bool isGreenText = false}) {
+      {bool isBold = false, bool isGreenText = false, PdfColor? textColor}) {
     return pw.Padding(
       padding: const pw.EdgeInsets.all(6),
       child: pw.Text(
@@ -441,7 +489,7 @@ class PdfReporter {
         style: pw.TextStyle(
           fontSize: 8,
           fontWeight: isBold ? pw.FontWeight.bold : pw.FontWeight.normal,
-          color: isGreenText ? PdfColors.green800 : PdfColors.black,
+          color: textColor ?? (isGreenText ? PdfColors.green800 : PdfColors.black),
         ),
       ),
     );
