@@ -53,7 +53,7 @@ class RunAuditUseCase {
     final issues = await analyzerRepository.analyzeFiles(targetFiles, config);
 
     // 4. Retrieve fixed semantics on current branch
-    final rawFixedList = await gitRepository.getFixedSemantics(baseBranch);
+    final rawFixedList = await gitRepository.getFixedSemantics(baseBranch, config.semanticsProperties);
     
     // Filter hanya memasukkan yang format ID-nya benar ke dalam Fixed Semantics list
     final fixedList = rawFixedList.where((item) {

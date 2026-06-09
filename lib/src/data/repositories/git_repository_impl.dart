@@ -40,7 +40,7 @@ class GitRepositoryImpl implements GitRepository {
   }
 
   @override
-  Future<List<FixedSemanticsItem>> getFixedSemantics(String baseBranch) async {
+  Future<List<FixedSemanticsItem>> getFixedSemantics(String baseBranch, List<String> semanticsProperties) async {
     final fixedList = <FixedSemanticsItem>[];
     try {
       List<String> diffOutput = [];
@@ -73,6 +73,12 @@ class GitRepositoryImpl implements GitRepository {
         } catch (_) {}
       }
 
+      final propsPattern = semanticsProperties.map((p) => RegExp.escape(p)).join('|');
+      final semanticsRegExp = RegExp(
+        '\\b(?:' + propsPattern + ')\\s*:\\s*[\\x27\\x22]([^\\x27\\x22]+)[\\x27\\x22]',
+        caseSensitive: false,
+      );
+
       String? currentFile;
       for (final line in diffOutput) {
         if (line.startsWith('+++ b/')) {
@@ -96,10 +102,7 @@ class GitRepositoryImpl implements GitRepository {
             if (fileLineIdx < 0 || fileLineIdx >= fileLines.length) continue;
 
             final fileLineContent = fileLines[fileLineIdx];
-            final semanticsMatch = RegExp(
-              r'\b(?:[a-zA-Z0-9_]*semanticsIdentifier|[a-zA-Z0-9_]*identifier|[a-zA-Z0-9_]*id)\s*:\s*[\x27\x22]([^\x27\x22]+)[\x27\x22]',
-              caseSensitive: false,
-            ).firstMatch(fileLineContent);
+            final semanticsMatch = semanticsRegExp.firstMatch(fileLineContent);
             
             if (semanticsMatch != null) {
               final identifier = semanticsMatch.group(1)!;

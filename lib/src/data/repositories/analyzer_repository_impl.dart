@@ -31,7 +31,7 @@ class AnalyzerRepositoryImpl implements AnalyzerRepository {
         final content = await fileDatasource.readFileAsString(file);
         final parseResult = fileDatasource.parseDartString(content);
         
-        final visitor = _SemanticsVisitor(file, content, config.targetWidgets, config.idPattern);
+        final visitor = _SemanticsVisitor(file, content, config.targetWidgets, config.idPattern, config.semanticsProperties);
         parseResult.unit.accept(visitor);
         allIssues.addAll(visitor.issues);
       } catch (_) {}
@@ -45,9 +45,10 @@ class _SemanticsVisitor extends RecursiveAstVisitor<void> {
   final String fileContent;
   final List<String> targetWidgets;
   final String idPattern;
+  final List<String> semanticsProperties;
   final List<SemanticsIssue> issues = [];
 
-  _SemanticsVisitor(this.filePath, this.fileContent, this.targetWidgets, this.idPattern);
+  _SemanticsVisitor(this.filePath, this.fileContent, this.targetWidgets, this.idPattern, this.semanticsProperties);
 
   void _checkWidget(String name, ArgumentList argumentList, AstNode node) {
     if (targetWidgets.contains(name)) {
@@ -76,13 +77,13 @@ class _SemanticsVisitor extends RecursiveAstVisitor<void> {
       bool hasSemantics = false;
       String? semanticsValue;
       
-      // Mengizinkan nama parameter custom yang berakhiran 'identifier' atau 'id', atau bernilai 'id' murni.
-      final idParamRegex = RegExp(r'^(?:semanticsidentifier|identifier|semanticsid|identifierid|id)$', caseSensitive: false);
+      // Mengubah ke lowercase untuk membandingkan secara case-insensitive
+      final lowerCaseProps = semanticsProperties.map((p) => p.toLowerCase()).toList();
 
       for (final arg in argumentList.arguments) {
         if (arg is NamedExpression) {
           final paramName = arg.name.label.name.toLowerCase();
-          if (idParamRegex.hasMatch(paramName) || paramName.endsWith('identifier') || paramName.endsWith('id')) {
+          if (lowerCaseProps.contains(paramName)) {
             hasSemantics = true;
             // Dapatkan nilai string literal jika memungkinkan
             final valueExpr = arg.expression;

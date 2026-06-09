@@ -72,7 +72,7 @@ flutter pub get
 Anda dapat menyesuaikan perilaku auditor dengan membuat berkas konfigurasi bernama `semantics_checker.yaml` pada root direktori proyek Flutter Anda:
 
 ```yaml
-# Daftar nama widget yang wajib memiliki parameter semanticsIdentifier
+# Daftar nama widget yang wajib memiliki parameter semanticsIdentifier/ID penanda
 target_widgets:
   - CustomButton
   - CustomTextField
@@ -88,6 +88,17 @@ exclude_paths:
   - ".freezed.dart"
   - "generated/"
   - "test/"
+
+# [KUSTOM] Format RegExp untuk memvalidasi penamaan ID (default: snake_case)
+id_pattern: "^[a-z0-9_]+$"
+
+# [KUSTOM] Daftar nama properti parameter widget yang dianggap sebagai penanda Semantics ID
+semantics_properties:
+  - semanticsIdentifier
+  - identifier
+  - identifierId
+  - semanticsId
+  - testId # Contoh properti kustom baru pada widget Anda
 ```
 
 ---
