@@ -52,22 +52,12 @@ semantics_checker/
 
 ## 📦 Cara Memasang di Proyek Flutter
 
-Tambahkan package ini ke bagian `dev_dependencies` di dalam berkas `pubspec.yaml` proyek Flutter target Anda.
+Tambahkan package ini ke bagian `dev_dependencies` di dalam berkas `pubspec.yaml` proyek Flutter target Anda menggunakan referensi Git Repository:
 
-### A. Referensi Lokasi Lokal (Tahap Pengembangan)
 ```yaml
 dev_dependencies:
   semantics_checker:
-    path: ../semantics_checker
-```
-
-### B. Referensi Git Repository (Siap Produksi)
-```yaml
-dev_dependencies:
-  semantics_checker:
-    git:
-      url: https://github.com/rizkyhamdana/semantics_checker.git
-      ref: main
+    git: https://github.com/rizkyhamdana/semantics_checker.git
 ```
 
 Jalankan perintah berikut di proyek Flutter Anda untuk mengunduh package:
