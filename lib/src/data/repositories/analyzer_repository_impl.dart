@@ -200,7 +200,9 @@ class _SemanticsVisitor extends RecursiveAstVisitor<void> {
 
   String _suggestIdentifier(String widgetName, String snippet) {
     String prefix = 'btn';
-    if (['CustomTextField', 'LabeledTextField'].contains(widgetName)) {
+    
+    // Kelompokkan input fields
+    if (['CustomTextField', 'LabeledTextField', 'TextField', 'TextFormField'].contains(widgetName)) {
       prefix = 'input';
     }
 
