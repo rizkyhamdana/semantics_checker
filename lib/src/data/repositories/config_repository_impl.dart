@@ -12,6 +12,7 @@ class ConfigRepositoryImpl implements ConfigRepository {
   Future<SemanticsConfig> loadConfig(String configPath) async {
     final targets = <String>[];
     final excludes = <String>[];
+    String idPattern = '^[a-z0-9_]+\$'; // Default snake_case regex
 
     if (fileDatasource.fileExists(configPath)) {
       try {
@@ -23,6 +24,9 @@ class ConfigRepositoryImpl implements ConfigRepository {
           }
           if (doc['exclude_paths'] != null && doc['exclude_paths'] is YamlList) {
             excludes.addAll(List<String>.from(doc['exclude_paths']));
+          }
+          if (doc['id_pattern'] != null && doc['id_pattern'] is String) {
+            idPattern = doc['id_pattern'] as String;
           }
         }
       } catch (_) {}
@@ -52,6 +56,7 @@ class ConfigRepositoryImpl implements ConfigRepository {
     return SemanticsConfig(
       targetWidgets: targets,
       excludePaths: excludes,
+      idPattern: idPattern,
     );
   }
 }

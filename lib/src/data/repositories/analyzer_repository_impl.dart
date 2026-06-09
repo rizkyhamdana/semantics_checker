@@ -31,7 +31,7 @@ class AnalyzerRepositoryImpl implements AnalyzerRepository {
         final content = await fileDatasource.readFileAsString(file);
         final parseResult = fileDatasource.parseDartString(content);
         
-        final visitor = _SemanticsVisitor(file, content, config.targetWidgets);
+        final visitor = _SemanticsVisitor(file, content, config.targetWidgets, config.idPattern);
         parseResult.unit.accept(visitor);
         allIssues.addAll(visitor.issues);
       } catch (_) {}
@@ -44,9 +44,10 @@ class _SemanticsVisitor extends RecursiveAstVisitor<void> {
   final String filePath;
   final String fileContent;
   final List<String> targetWidgets;
+  final String idPattern;
   final List<SemanticsIssue> issues = [];
 
-  _SemanticsVisitor(this.filePath, this.fileContent, this.targetWidgets);
+  _SemanticsVisitor(this.filePath, this.fileContent, this.targetWidgets, this.idPattern);
 
   void _checkWidget(String name, ArgumentList argumentList, AstNode node) {
     if (targetWidgets.contains(name)) {
@@ -73,12 +74,23 @@ class _SemanticsVisitor extends RecursiveAstVisitor<void> {
       }
 
       bool hasSemantics = false;
+      String? semanticsValue;
       
+      // Mengizinkan nama parameter custom yang berakhiran 'identifier' atau 'id', atau bernilai 'id' murni.
+      final idParamRegex = RegExp(r'^(?:semanticsidentifier|identifier|semanticsid|identifierid|id)$', caseSensitive: false);
+
       for (final arg in argumentList.arguments) {
         if (arg is NamedExpression) {
-          final paramName = arg.name.label.name;
-          if (paramName == 'semanticsIdentifier' || paramName == 'identifier') {
+          final paramName = arg.name.label.name.toLowerCase();
+          if (idParamRegex.hasMatch(paramName) || paramName.endsWith('identifier') || paramName.endsWith('id')) {
             hasSemantics = true;
+            // Dapatkan nilai string literal jika memungkinkan
+            final valueExpr = arg.expression;
+            if (valueExpr is SimpleStringLiteral) {
+              semanticsValue = valueExpr.value;
+            } else {
+              semanticsValue = valueExpr.toSource().replaceAll(RegExp(r"['" + '"' + "]"), '');
+            }
             break;
           }
         }
@@ -91,12 +103,41 @@ class _SemanticsVisitor extends RecursiveAstVisitor<void> {
             final parentName = parent.constructorName.toSource().split('.').first;
             if (parentName == 'Semantics') {
               hasSemantics = true;
+              // Cari parameter identifier pada widget Semantics
+              for (final arg in parent.argumentList.arguments) {
+                if (arg is NamedExpression) {
+                  final paramName = arg.name.label.name;
+                  if (paramName == 'identifier') {
+                    final valueExpr = arg.expression;
+                    if (valueExpr is SimpleStringLiteral) {
+                      semanticsValue = valueExpr.value;
+                    } else {
+                      semanticsValue = valueExpr.toSource().replaceAll(RegExp(r"['" + '"' + "]"), '');
+                    }
+                    break;
+                  }
+                }
+              }
               break;
             }
           } else if (parent is MethodInvocation) {
             final parentName = parent.methodName.toSource();
             if (parentName == 'Semantics') {
               hasSemantics = true;
+              for (final arg in parent.argumentList.arguments) {
+                if (arg is NamedExpression) {
+                  final paramName = arg.name.label.name;
+                  if (paramName == 'identifier') {
+                    final valueExpr = arg.expression;
+                    if (valueExpr is SimpleStringLiteral) {
+                      semanticsValue = valueExpr.value;
+                    } else {
+                      semanticsValue = valueExpr.toSource().replaceAll(RegExp(r"['" + '"' + "]"), '');
+                    }
+                    break;
+                  }
+                }
+              }
               break;
             }
           }
@@ -107,15 +148,16 @@ class _SemanticsVisitor extends RecursiveAstVisitor<void> {
         }
       }
 
-      if (!hasSemantics) {
-        String snippet = '';
-        try {
-          final fileLines = fileContent.split('\n');
-          final endLineIdx = (line + 3 < fileLines.length) ? line + 3 : fileLines.length;
-          final startLineIdx = (line - 1 >= 0) ? line - 1 : 0;
-          snippet = fileLines.sublist(startLineIdx, endLineIdx).map((l) => l.trim()).join('\n');
-        } catch (_) {}
+      String snippet = '';
+      try {
+        final fileLines = fileContent.split('\n');
+        final endLineIdx = (line + 3 < fileLines.length) ? line + 3 : fileLines.length;
+        final startLineIdx = (line - 1 >= 0) ? line - 1 : 0;
+        snippet = fileLines.sublist(startLineIdx, endLineIdx).map((l) => l.trim()).join('\n');
+      } catch (_) {}
 
+      // Kasus 1: Sama sekali tidak ada Semantics ID
+      if (!hasSemantics) {
         String suggestionSnippet = '';
         try {
           final endOffset = (node.offset + 1500 < fileContent.length) ? node.offset + 1500 : fileContent.length;
@@ -130,7 +172,28 @@ class _SemanticsVisitor extends RecursiveAstVisitor<void> {
           widgetName: name,
           suggestion: suggestion,
           codeSnippet: snippet,
+          isFormatIssue: false,
         ));
+      } 
+      // Kasus 2: Ada Semantics ID tetapi salah format berdasarkan RegExp config
+      else if (semanticsValue != null) {
+        // Bersihkan interpolasi string dinamis (seperti $index, ${index}) agar tidak merusak validasi regex standar
+        final cleanValue = semanticsValue
+            .replaceAll(RegExp(r'\$[a-zA-Z0-9_]+'), '')
+            .replaceAll(RegExp(r'\$\{[a-zA-Z0-9_]+\}'), '');
+
+        final regExp = RegExp(idPattern);
+        if (!regExp.hasMatch(cleanValue)) {
+          issues.add(SemanticsIssue(
+            filePath: filePath,
+            line: line,
+            widgetName: name,
+            suggestion: '', // manual fix
+            codeSnippet: snippet,
+            isFormatIssue: true,
+            errorMessage: 'Format identifier "$semanticsValue" tidak valid (harus sesuai pattern: $idPattern)',
+          ));
+        }
       }
     }
   }

@@ -4,6 +4,8 @@ class SemanticsIssue {
   final String widgetName;
   final String suggestion;
   final String codeSnippet;
+  final bool isFormatIssue;
+  final String? errorMessage;
 
   SemanticsIssue({
     required this.filePath,
@@ -11,5 +13,7 @@ class SemanticsIssue {
     required this.widgetName,
     required this.suggestion,
     required this.codeSnippet,
+    this.isFormatIssue = false,
+    this.errorMessage,
   });
 }

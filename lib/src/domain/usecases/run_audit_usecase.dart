@@ -53,7 +53,15 @@ class RunAuditUseCase {
     final issues = await analyzerRepository.analyzeFiles(targetFiles, config);
 
     // 4. Retrieve fixed semantics on current branch
-    final fixedList = await gitRepository.getFixedSemantics(baseBranch);
+    final rawFixedList = await gitRepository.getFixedSemantics(baseBranch);
+    
+    // Filter hanya memasukkan yang format ID-nya benar ke dalam Fixed Semantics list
+    final fixedList = rawFixedList.where((item) {
+      final cleanVal = item.identifier
+          .replaceAll(RegExp(r'\\?\$[a-zA-Z0-9_]+'), '')
+          .replaceAll(RegExp(r'\\?\$\{[a-zA-Z0-9_]+\}'), '');
+      return RegExp(config.idPattern).hasMatch(cleanVal);
+    }).toList();
 
     // 5. Generate PDF, HTML, Markdown reports
     await reportRepository.generateReports(issues, fixedList);

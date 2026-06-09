@@ -83,15 +83,24 @@ class MarkdownReporter {
               ? '${singleLineCode.substring(0, 47)}...'
               : singleLineCode;
 
+          final displaySuggestion = issue.isFormatIssue 
+              ? '❌ _Format Salah_' 
+              : '**`${issue.suggestion}`**';
+
           buffer.writeln(
-              '| **${issue.line}** | `${issue.widgetName}` | **`${issue.suggestion}`** | `${formattedCodeSnippet}` |');
+              '| **${issue.line}** | `${issue.widgetName}` | $displaySuggestion | `${formattedCodeSnippet}` |');
         }
 
         buffer.writeln('\n');
         buffer.writeln('#### Detailed Code View\n');
         for (final issue in group.issues) {
-          buffer.writeln(
-              '**Line ${issue.line}** - `${issue.widgetName}` (Suggested: `${issue.suggestion}`):');
+          if (issue.isFormatIssue) {
+            buffer.writeln(
+                '**Line ${issue.line}** - `${issue.widgetName}` (⚠️ ${issue.errorMessage}):');
+          } else {
+            buffer.writeln(
+                '**Line ${issue.line}** - `${issue.widgetName}` (Suggested: `${issue.suggestion}`):');
+          }
           buffer.writeln('```dart');
           buffer.writeln(issue.codeSnippet.trim());
           buffer.writeln('```\n');

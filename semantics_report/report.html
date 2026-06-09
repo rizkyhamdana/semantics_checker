@@ -1,171 +1,3 @@
-import 'dart:io';
-import '../../domain/entities/semantics_issue.dart';
-import '../../domain/entities/fixed_semantics_item.dart';
-import 'brand_identity.dart';
-
-class HtmlReporter {
-  static Future<void> generate(
-    List<SemanticsIssue> issues,
-    List<FixedSemanticsItem> fixedList,
-    String dirPath,
-  ) async {
-    final statusColor = issues.isEmpty ? '#10B981' : '#EF4444';
-    final statusText = issues.isEmpty ? 'PASSED' : 'FAILED';
-    final brandLogoSvg = BrandIdentity.reportLogoSvg;
-
-    final Map<String, List<SemanticsIssue>> grouped = {};
-    for (final issue in issues) {
-      grouped.putIfAbsent(issue.filePath, () => []).add(issue);
-    }
-
-    final sidebarItemsHtml = StringBuffer();
-    final filePanelsHtml = StringBuffer();
-
-    int fileIdx = 0;
-    grouped.forEach((filePath, fileIssues) {
-      fileIdx++;
-      final fileId = 'file-$fileIdx';
-
-      final parts = filePath.split('/');
-      final fileName = parts.last;
-      final fileDir =
-          parts.length > 1 ? parts.sublist(0, parts.length - 1).join('/') : '';
-
-      sidebarItemsHtml.write('''
-      <div class="sidebar-item" id="nav-$fileId" onclick="showFile('$fileId')" data-filepath="${filePath.toLowerCase()}">
-        <div class="sidebar-item-info">
-          <span class="file-name">$fileName</span>
-          <span class="file-dir">$fileDir</span>
-        </div>
-        <span class="badge-count">${fileIssues.length}</span>
-      </div>
-      ''');
-
-      final issueCardsHtml = StringBuffer();
-      for (final issue in fileIssues) {
-        final escapedSnippet = issue.codeSnippet
-            .replaceAll('&', '&amp;')
-            .replaceAll('<', '&lt;')
-            .replaceAll('>', '&gt;')
-            .replaceAll('"', '&quot;')
-            .replaceAll("'", '&#39;')
-            .replaceAll('\n', '<br/>')
-            .replaceAll(' ', '&nbsp;');
-
-        final suggestionBlock = issue.isFormatIssue 
-            ? '''
-              <div class="suggestion-wrapper" style="background: var(--danger-light); border-color: #FECACA;">
-                <span class="suggestion-prefix" style="color: #DC2626;">Error:</span>
-                <span class="suggestion-val" style="color: var(--danger); font-family: sans-serif;">${issue.errorMessage}</span>
-              </div>
-              '''
-            : '''
-              <div class="suggestion-wrapper">
-                <span class="suggestion-prefix">Suggest:</span>
-                <span class="suggestion-val">${issue.suggestion}</span>
-              </div>
-              ''';
-
-        final actionButton = issue.isFormatIssue 
-            ? '''
-              <span class="badge-count" style="background: var(--danger-light); color: var(--danger); font-size: 0.8em; border-radius: 6px;">Perlu Diubah</span>
-              '''
-            : '''
-              <button class="btn-copy" onclick="copyId(event, '${issue.suggestion}')">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                Copy ID
-              </button>
-              ''';
-
-        issueCardsHtml.write('''
-        <div class="issue-card">
-          <div class="issue-header" onclick="toggleIssue(this)">
-            <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-              <span class="line-badge">Line ${issue.line}</span>
-              <span class="widget-badge" ${issue.isFormatIssue ? 'style="background: #FFF7ED; color: #EA580C; border-color: #FED7AA;"' : ''}>${issue.widgetName}</span>
-              $suggestionBlock
-            </div>
-            <div style="display: flex; align-items: center; gap: 12px;">
-              $actionButton
-              <span class="caret-icon">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="6 9 12 15 18 9"></polyline></svg>
-              </span>
-            </div>
-          </div>
-          <div class="issue-body">
-            <div class="code-container">
-              <div class="code-header">
-                <span>Dart Source Code</span>
-              </div>
-              <div class="code-box">$escapedSnippet</div>
-            </div>
-          </div>
-        </div>
-        ''');
-      }
-
-      filePanelsHtml.write('''
-      <div class="file-panel" id="panel-$fileId" style="display: none;">
-        <div class="panel-header">
-          <div class="panel-title-wrapper">
-            <span class="panel-file-icon">📄</span>
-            <div>
-              <h2 class="panel-file-title">$fileName</h2>
-              <span class="panel-file-path">$filePath</span>
-            </div>
-          </div>
-          <div class="panel-actions">
-            <button class="btn btn-primary" onclick="toggleAllAccordions('$fileId', true)">Expand All</button>
-            <button class="btn" onclick="toggleAllAccordions('$fileId', false)">Collapse All</button>
-          </div>
-        </div>
-        <div class="issues-list">
-          $issueCardsHtml
-        </div>
-      </div>
-      ''');
-    });
-
-    final fixedRowsHtml = StringBuffer();
-    for (int i = 0; i < fixedList.length; i++) {
-      final item = fixedList[i];
-      fixedRowsHtml.write('''
-      <tr style="border-bottom: 1px solid var(--border-color); transition: background-color 0.2s;">
-        <td style="padding: 14px 16px; font-weight: 600; color: #4B5563; font-family: 'JetBrains Mono', monospace; font-size: 0.85em;">Line ${item.line}</td>
-        <td style="padding: 14px 16px;"><span class="widget-badge" style="background: var(--success-light); color: var(--success); border-color: #A7F3D0;">${item.widget}</span></td>
-        <td style="padding: 14px 16px; font-weight: 700; color: var(--success); font-family: 'JetBrains Mono', monospace; font-size: 0.85em;">${item.identifier}</td>
-        <td style="padding: 14px 16px; color: var(--text-muted); font-size: 0.85em; word-break: break-all;">${item.file}</td>
-      </tr>
-      ''');
-    }
-
-    final fixedListContent = fixedList.isEmpty
-        ? '''
-        <div class="welcome-card" style="margin-top: 16px;">
-          <div class="welcome-card-icon">🍃</div>
-          <h3>No Fixed Semantics Found</h3>
-          <p>No verified interactive widgets with semantics identifiers detected on this branch yet.</p>
-        </div>
-        '''
-        : '''
-        <div class="table-container" style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; margin-top: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);">
-          <table style="width: 100%; border-collapse: collapse; text-align: left;">
-            <thead>
-              <tr style="background: #F8FAFC; border-bottom: 1px solid var(--border-color);">
-                <th style="padding: 12px 16px; font-size: 0.75em; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Line</th>
-                <th style="padding: 12px 16px; font-size: 0.75em; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Widget</th>
-                <th style="padding: 12px 16px; font-size: 0.75em; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Semantics ID</th>
-                <th style="padding: 12px 16px; font-size: 0.75em; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">File Path</th>
-              </tr>
-            </thead>
-            <tbody>
-              $fixedRowsHtml
-            </tbody>
-          </table>
-        </div>
-        ''';
-
-    final htmlContent = '''
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -261,7 +93,7 @@ class HtmlReporter {
     }
 
     .status-pill {
-      background: $statusColor;
+      background: #10B981;
       color: white;
       padding: 6px 16px;
       border-radius: 99px;
@@ -813,13 +645,31 @@ class HtmlReporter {
       <button class="sidebar-toggle-btn" onclick="toggleSidebar()">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
       </button>
-      <div class="brand-mark">$brandLogoSvg</div>
+      <div class="brand-mark"><svg width="96" height="96" viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Semantics Checker">
+<defs>
+<linearGradient id="sc-surface" x1="16" y1="10" x2="78" y2="86" gradientUnits="userSpaceOnUse">
+<stop stop-color="#38BDF8"/>
+<stop offset="0.5" stop-color="#2563EB"/>
+<stop offset="1" stop-color="#0F172A"/>
+</linearGradient>
+<linearGradient id="sc-accent" x1="32" y1="34" x2="72" y2="74" gradientUnits="userSpaceOnUse">
+<stop stop-color="#A7F3D0"/>
+<stop offset="1" stop-color="#34D399"/>
+</linearGradient>
+</defs>
+<path d="M48 7L78 19V41C78 61 65 78 48 86C31 78 18 61 18 41V19L48 7Z" fill="url(#sc-surface)"/>
+<path d="M39 35L30 44L39 53" stroke="#E0F2FE" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M57 35L66 44L57 53" stroke="#E0F2FE" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M39 62L46 69L63 50" stroke="url(#sc-accent)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="48" cy="44" r="6" fill="#E0F2FE"/>
+<circle cx="48" cy="44" r="2.6" fill="#2563EB"/>
+</svg></div>
       <div class="header-title">
-        <h1>${BrandIdentity.appName}</h1>
+        <h1>Semantics Checker</h1>
       </div>
     </div>
     <div class="header-status">
-      <span class="status-pill">$statusText</span>
+      <span class="status-pill">PASSED</span>
     </div>
   </header>
 
@@ -846,11 +696,11 @@ class HtmlReporter {
           <div class="sidebar-item-info">
             <span class="file-name">Fixed Semantics</span>
           </div>
-          <span class="badge-count" style="background: var(--success-light); color: var(--success);">${fixedList.length}</span>
+          <span class="badge-count" style="background: var(--success-light); color: var(--success);">0</span>
         </div>
         
         <div class="sidebar-section-title" style="border-top: 1px solid var(--border-color); margin-top: 8px; padding-top: 12px;">Remaining Issues</div>
-        $sidebarItemsHtml
+        
       </div>
     </aside>
 
@@ -866,28 +716,23 @@ class HtmlReporter {
         <div class="stats-grid">
           <div class="stat-card danger">
             <span class="stat-card-title">Remaining Issues</span>
-            <span class="stat-card-value">${issues.length}</span>
+            <span class="stat-card-value">0</span>
           </div>
           <div class="stat-card">
             <span class="stat-card-title">Affected Files</span>
-            <span class="stat-card-value">${grouped.length}</span>
+            <span class="stat-card-value">0</span>
           </div>
           <div class="stat-card success">
             <span class="stat-card-title">Fixed in Branch</span>
-            <span class="stat-card-value">${fixedList.length}</span>
+            <span class="stat-card-value">0</span>
           </div>
         </div>
 
         <div class="welcome-card">
-          ${issues.isEmpty ? '''
-            <div class="welcome-card-icon">🎉</div>
+                      <div class="welcome-card-icon">🎉</div>
             <h3>Excellent! Code Base Compliant</h3>
             <p>All scanned changed widgets have valid semantics identifiers configured. High automation capability achieved.</p>
-          ''' : '''
-            <div class="welcome-card-icon">🔍</div>
-            <h3>Select a File from Sidebar</h3>
-            <p>Choose any file on the left navigation to inspect its remaining missing semantics issues, see suggested IDs, and copy code snippets.</p>
-          '''}
+          
         </div>
       </div>
 
@@ -902,11 +747,16 @@ class HtmlReporter {
             </div>
           </div>
         </div>
-        $fixedListContent
+                <div class="welcome-card" style="margin-top: 16px;">
+          <div class="welcome-card-icon">🍃</div>
+          <h3>No Fixed Semantics Found</h3>
+          <p>No verified interactive widgets with semantics identifiers detected on this branch yet.</p>
+        </div>
+        
       </div>
 
       <!-- Individual File Panels -->
-      $filePanelsHtml
+      
     </main>
   </div>
 
@@ -1034,9 +884,3 @@ class HtmlReporter {
   </script>
 </body>
 </html>
-''';
-
-    await File('$dirPath/report.html').writeAsString(htmlContent);
-    print('\x1B[1;32m✓ HTML report created: $dirPath/report.html\x1B[0m');
-  }
-}

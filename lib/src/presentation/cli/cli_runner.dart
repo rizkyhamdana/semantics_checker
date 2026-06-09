@@ -56,8 +56,12 @@ class CliRunner {
       if (result.issues.isNotEmpty) {
         for (final issue in result.issues) {
           print('\n📄 File: ${issue.filePath}');
-          print('  [Baris ${issue.line}] Widget "${issue.widgetName}" lacks semantics identifier.');
-          print('    👉 Suggested placeholder ID: "${issue.suggestion}"');
+          if (issue.isFormatIssue) {
+            print('  [Baris ${issue.line}] ⚠️ ${issue.errorMessage}');
+          } else {
+            print('  [Baris ${issue.line}] Widget "${issue.widgetName}" lacks semantics identifier.');
+            print('    👉 Suggested placeholder ID: "${issue.suggestion}"');
+          }
         }
       }
 

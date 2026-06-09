@@ -96,7 +96,10 @@ class GitRepositoryImpl implements GitRepository {
             if (fileLineIdx < 0 || fileLineIdx >= fileLines.length) continue;
 
             final fileLineContent = fileLines[fileLineIdx];
-            final semanticsMatch = RegExp(r'\b(?:semanticsIdentifier|identifier)\s*:\s*[\x27\x22]([^\x27\x22]+)[\x27\x22]').firstMatch(fileLineContent);
+            final semanticsMatch = RegExp(
+              r'\b(?:[a-zA-Z0-9_]*semanticsIdentifier|[a-zA-Z0-9_]*identifier|[a-zA-Z0-9_]*id)\s*:\s*[\x27\x22]([^\x27\x22]+)[\x27\x22]',
+              caseSensitive: false,
+            ).firstMatch(fileLineContent);
             
             if (semanticsMatch != null) {
               final identifier = semanticsMatch.group(1)!;
