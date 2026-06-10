@@ -57,10 +57,13 @@ class ConfigRepositoryImpl implements ConfigRepository {
         'IconButton',
         'GestureDetector',
         'InkWell',
+        'InkResponse',
         'ListTile',
         'TextField',
         'TextFormField',
         'Radio',
+        'Checkbox',
+        'Switch',
         'FloatingActionButton',
       ]);
     }
