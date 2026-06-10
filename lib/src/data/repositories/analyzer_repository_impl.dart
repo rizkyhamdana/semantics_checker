@@ -68,6 +68,16 @@ class AnalyzerRepositoryImpl implements AnalyzerRepository {
   }
 }
 
+const Map<String, List<String>> _conditionalWidgets = {
+  'ListTile': ['onTap', 'onLongPress'],
+  'GestureDetector': [
+    'onTap', 'onLongPress', 'onDoubleTap', 'onTapDown', 
+    'onPanDown', 'onScaleStart', 'onVerticalDragStart', 'onHorizontalDragStart'
+  ],
+  'InkWell': ['onTap', 'onDoubleTap', 'onLongPress'],
+  'InkResponse': ['onTap', 'onDoubleTap', 'onLongPress'],
+};
+
 class _SemanticsVisitor extends RecursiveAstVisitor<void> {
   final String filePath;
   final String fileContent;
@@ -92,6 +102,28 @@ class _SemanticsVisitor extends RecursiveAstVisitor<void> {
 
   void _checkWidget(String name, ArgumentList argumentList, AstNode node) {
     if (targetWidgets.contains(name)) {
+      if (_conditionalWidgets.containsKey(name)) {
+        final interactiveParams = _conditionalWidgets[name]!;
+        bool hasInteraction = false;
+
+        for (final arg in argumentList.arguments) {
+          if (arg is NamedExpression) {
+            final paramName = arg.name.label.name;
+            if (interactiveParams.contains(paramName)) {
+              final valueSource = arg.expression.toSource();
+              if (valueSource != 'null') {
+                hasInteraction = true;
+                break;
+              }
+            }
+          }
+        }
+
+        if (!hasInteraction) {
+          return;
+        }
+      }
+
       final lineInfo = node.root as CompilationUnit;
       final line = lineInfo.lineInfo.getLocation(node.offset).lineNumber;
 
