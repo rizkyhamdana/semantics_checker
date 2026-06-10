@@ -68,6 +68,13 @@ class AnalyzerRepositoryImpl implements AnalyzerRepository {
   }
 }
 
+const Set<String> _conditionalWidgets = {
+  'ListTile',
+  'GestureDetector',
+  'InkWell',
+  'InkResponse',
+};
+
 class _SemanticsVisitor extends RecursiveAstVisitor<void> {
   final String filePath;
   final String fileContent;
@@ -92,6 +99,27 @@ class _SemanticsVisitor extends RecursiveAstVisitor<void> {
 
   void _checkWidget(String name, ArgumentList argumentList, AstNode node) {
     if (targetWidgets.contains(name)) {
+      if (_conditionalWidgets.contains(name)) {
+        bool hasInteraction = false;
+
+        for (final arg in argumentList.arguments) {
+          if (arg is NamedExpression) {
+            final paramName = arg.name.label.name;
+            if (paramName.startsWith('on')) {
+              final valueSource = arg.expression.toSource();
+              if (valueSource != 'null') {
+                hasInteraction = true;
+                break;
+              }
+            }
+          }
+        }
+
+        if (!hasInteraction) {
+          return;
+        }
+      }
+
       final lineInfo = node.root as CompilationUnit;
       final line = lineInfo.lineInfo.getLocation(node.offset).lineNumber;
 
