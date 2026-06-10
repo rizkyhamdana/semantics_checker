@@ -17,6 +17,7 @@ class PdfReporter {
 
     pdf.addPage(
       pw.MultiPage(
+        maxPages: 1000,
         pageFormat: PdfPageFormat.letter.landscape,
         margin: const pw.EdgeInsets.all(32),
         header: (pw.Context context) {

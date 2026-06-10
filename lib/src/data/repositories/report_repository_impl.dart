@@ -19,7 +19,11 @@ class ReportRepositoryImpl implements ReportRepository {
     }
 
     // 1. Generate PDF
-    await PdfReporter.generate(issues, fixedList, reportDir.path);
+    try {
+      await PdfReporter.generate(issues, fixedList, reportDir.path);
+    } catch (e) {
+      print('\x1B[1;33m⚠️ Warning: Failed to generate PDF report: $e\x1B[0m');
+    }
 
     // 2. Generate HTML
     await HtmlReporter.generate(issues, fixedList, reportDir.path);
