@@ -404,46 +404,88 @@ class _ClassDefinitionVisitor extends RecursiveAstVisitor<void> {
   @override
   void visitClassDeclaration(ClassDeclaration node) {
     final className = node.name.lexeme;
-    if (!targetWidgets.contains(className)) {
+    
+    // Check if the class itself is a target widget
+    final isTargetWidget = targetWidgets.contains(className);
+    
+    // Check if it is a State class for a target widget (e.g. CustomButtonState extends State<CustomButton>)
+    String? targetWidgetNameFromState;
+    final ext = node.extendsClause;
+    if (ext != null) {
+      final superType = ext.superclass;
+      if (superType.name2.lexeme == 'State') {
+        final typeArgs = superType.typeArguments?.arguments;
+        if (typeArgs != null && typeArgs.isNotEmpty) {
+          final firstArg = typeArgs.first;
+          if (firstArg is NamedType) {
+            final argName = firstArg.name2.lexeme;
+            if (targetWidgets.contains(argName)) {
+              targetWidgetNameFromState = argName;
+            }
+          }
+        }
+      }
+    }
+
+    if (!isTargetWidget && targetWidgetNameFromState == null) {
       super.visitClassDeclaration(node);
       return;
     }
 
     bool hasDefault = false;
 
-    // 1. Check constructor parameters for defaults
-    for (final member in node.members) {
-      if (member is ConstructorDeclaration) {
-        for (final param in member.parameters.parameters) {
-          if (param is DefaultFormalParameter) {
-            final paramName = param.name?.lexeme ?? '';
-            if (semanticsProperties.contains(paramName)) {
-              if (param.defaultValue != null) {
-                hasDefault = true;
-                break;
+    if (isTargetWidget) {
+      // 1. Check constructor parameters for defaults
+      for (final member in node.members) {
+        if (member is ConstructorDeclaration) {
+          for (final param in member.parameters.parameters) {
+            if (param is DefaultFormalParameter) {
+              final paramName = param.name?.lexeme ?? '';
+              if (semanticsProperties.contains(paramName)) {
+                if (param.defaultValue != null) {
+                  hasDefault = true;
+                  break;
+                }
               }
             }
           }
         }
+        if (hasDefault) break;
       }
-      if (hasDefault) break;
+
+      // 2. Check build method of target widget (if it is a StatelessWidget)
+      if (!hasDefault) {
+        for (final member in node.members) {
+          if (member is MethodDeclaration && member.name.lexeme == 'build') {
+            final buildVisitor = _SemanticsCheckInBuildVisitor(semanticsProperties);
+            member.accept(buildVisitor);
+            if (buildVisitor.hasDefaultSemanticsValue) {
+              hasDefault = true;
+              break;
+            }
+          }
+        }
+      }
+      
+      if (hasDefault) {
+        widgetsWithDefaults[className] = true;
+      }
     }
 
-    // 2. Check build method body for Semantics wrapping with defaults
-    if (!hasDefault) {
+    if (targetWidgetNameFromState != null) {
+      // Check the build method of the State class for Semantics with default value
       for (final member in node.members) {
         if (member is MethodDeclaration && member.name.lexeme == 'build') {
           final buildVisitor = _SemanticsCheckInBuildVisitor(semanticsProperties);
           member.accept(buildVisitor);
           if (buildVisitor.hasDefaultSemanticsValue) {
-            hasDefault = true;
+            widgetsWithDefaults[targetWidgetNameFromState] = true;
             break;
           }
         }
       }
     }
 
-    widgetsWithDefaults[className] = hasDefault;
     super.visitClassDeclaration(node);
   }
 }
