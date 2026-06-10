@@ -479,11 +479,22 @@ class _SemanticsCheckInBuildVisitor extends RecursiveAstVisitor<void> {
         if (paramName == 'identifier') {
           final expr = arg.expression;
           if (expr is BinaryExpression && expr.operator.lexeme == '??') {
-            if (expr.rightOperand is SimpleStringLiteral) {
+            final right = expr.rightOperand;
+            if (right is SimpleStringLiteral) {
               hasDefaultSemanticsValue = true;
+            } else {
+              final rightSrc = right.toSource().toLowerCase();
+              if (rightSrc.contains('text') || rightSrc.contains('label') || rightSrc.contains('title') || rightSrc.contains('hint')) {
+                hasDefaultSemanticsValue = true;
+              }
             }
           } else if (expr is SimpleStringLiteral) {
             hasDefaultSemanticsValue = true;
+          } else {
+            final exprSrc = expr.toSource().toLowerCase();
+            if (exprSrc.contains('text') || exprSrc.contains('label') || exprSrc.contains('title') || exprSrc.contains('hint')) {
+              hasDefaultSemanticsValue = true;
+            }
           }
         }
       }
