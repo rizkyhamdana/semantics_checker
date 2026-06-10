@@ -26,9 +26,17 @@ class ReportRepositoryImpl implements ReportRepository {
     }
 
     // 2. Generate HTML
-    await HtmlReporter.generate(issues, fixedList, reportDir.path);
+    try {
+      await HtmlReporter.generate(issues, fixedList, reportDir.path);
+    } catch (e) {
+      print('\x1B[1;33m⚠️ Warning: Failed to generate HTML report: $e\x1B[0m');
+    }
 
     // 3. Generate Markdown
-    await MarkdownReporter.generate(issues, fixedList, reportDir.path);
+    try {
+      await MarkdownReporter.generate(issues, fixedList, reportDir.path);
+    } catch (e) {
+      print('\x1B[1;33m⚠️ Warning: Failed to generate Markdown report: $e\x1B[0m');
+    }
   }
 }
